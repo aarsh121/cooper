@@ -317,10 +317,21 @@ export default function App() {
               title="Minimize"
               onClick={() => void window.tars.hideWindow()}
             >
-              −
+              <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden>
+                <path d="M6 12h12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+              </svg>
             </button>
-            <button className="menu-btn" aria-label="Menu" onClick={() => setMenuOpen((v) => !v)}>
-              ···
+            <button
+              className="menu-btn"
+              aria-label="Settings"
+              title="Settings"
+              onClick={() => setMenuOpen((v) => !v)}
+            >
+              <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden>
+                <circle cx="12" cy="6" r="1.6" fill="currentColor" />
+                <circle cx="12" cy="12" r="1.6" fill="currentColor" />
+                <circle cx="12" cy="18" r="1.6" fill="currentColor" />
+              </svg>
             </button>
           </div>
         </div>
