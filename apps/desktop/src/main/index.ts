@@ -33,10 +33,10 @@ function panelUrl(page = 'index.html'): string {
 
 function createMainWindow(): BrowserWindow {
   const display = screen.getPrimaryDisplay()
-  const width = 360
-  const height = 520
+  const width = 380
+  const height = 640
   const x = Math.round(display.workArea.x + display.workArea.width - width - 24)
-  const y = Math.round(display.workArea.y + 72)
+  const y = Math.round(display.workArea.y + 48)
   const settings = data.getSettings()
 
   const win = new BrowserWindow({
@@ -136,7 +136,7 @@ function broadcastState(): void {
 }
 
 app.whenReady().then(() => {
-  nativeTheme.themeSource = 'dark'
+  nativeTheme.themeSource = 'light'
   registerIpc(() => mainWindow)
 
   mainWindow = createMainWindow()
@@ -153,7 +153,11 @@ app.whenReady().then(() => {
         showHud(hudWindow, 'Nothing selected', panelUrl('hud.html'))
         return
       }
-      data.addItem(text, kind)
+      const item = data.addCaptureDeduped(text, kind)
+      if (!item) {
+        showHud(hudWindow, 'Already captured', panelUrl('hud.html'))
+        return
+      }
       broadcastState()
       showHud(hudWindow, 'Captured', panelUrl('hud.html'))
     },
