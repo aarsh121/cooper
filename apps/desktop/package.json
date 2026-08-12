@@ -40,8 +40,14 @@
       "output": "release"
     },
     "files": [
-      "out/**/*"
+      "out/**/*",
+      "package.json"
     ],
+    "asarUnpack": [
+      "**/*.node",
+      "**/uiohook-napi/**"
+    ],
+    "extraResources": [],
     "win": {
       "signAndEditExecutable": false,
       "target": [

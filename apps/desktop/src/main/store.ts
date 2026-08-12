@@ -1,7 +1,7 @@
 import Store from 'electron-store'
 import { copyFileSync, existsSync, mkdirSync, statSync, writeFileSync } from 'fs'
 import { basename, extname, join } from 'path'
-import { app } from 'electron'
+import * as electron from 'electron'
 import { randomUUID } from 'crypto'
 import {
   CooperAttachment,
@@ -56,7 +56,7 @@ export function listItems(): CooperItem[] {
 }
 
 function attachmentsDir(): string {
-  const dir = join(app.getPath('userData'), 'attachments')
+  const dir = join(electron.app.getPath('userData'), 'attachments')
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
   return dir
 }

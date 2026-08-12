@@ -1,3 +1,4 @@
+import * as electron from 'electron'
 import { readFileSync } from 'fs'
 import { extname as pathExtname } from 'path'
 import { uIOhook, UiohookKey } from 'uiohook-napi'
@@ -21,25 +22,25 @@ function isDouble(prev: number, now: number): boolean {
 async function readSelectionViaClipboard(): Promise<string> {
   if (isCapturing) return ''
   isCapturing = true
-  const previous = clipboard.readText()
+  const previous = electron.clipboard.readText()
   const marker = `__cooper_${Date.now()}__`
-  clipboard.writeText(marker)
+  electron.clipboard.writeText(marker)
 
   try {
     const mod = process.platform === 'darwin' ? UiohookKey.Meta : UiohookKey.Ctrl
     uIOhook.keyTap(UiohookKey.C, [mod])
     await new Promise((r) => setTimeout(r, 90))
-    const copied = clipboard.readText()
+    const copied = electron.clipboard.readText()
 
     if (!copied || copied === marker || copied === previous) {
-      clipboard.writeText(previous)
+      electron.clipboard.writeText(previous)
       return ''
     }
 
-    setTimeout(() => clipboard.writeText(previous), 300)
+    setTimeout(() => electron.clipboard.writeText(previous), 300)
     return copied.trim()
   } catch {
-    clipboard.writeText(previous)
+    electron.clipboard.writeText(previous)
     return ''
   } finally {
     isCapturing = false
@@ -47,15 +48,18 @@ async function readSelectionViaClipboard(): Promise<string> {
 }
 
 export function startCaptureListener(onCapture: CaptureHandler, onToggle: () => void): void {
-  globalShortcut.register('CommandOrControl+Shift+C', async () => {
-    const text = await readSelectionViaClipboard()
-    if (text) onCapture(text, 'capture')
-  })
+  try {
+    electron.globalShortcut.register('CommandOrControl+Shift+C', async () => {
+      const text = await readSelectionViaClipboard()
+      if (text) onCapture(text, 'capture')
+    })
 
-  globalShortcut.register('CommandOrControl+Shift+Space', () => onToggle())
+    electron.globalShortcut.register('CommandOrControl+Shift+Space', () => onToggle())
+  } catch (error) {
+    console.error('Failed to register shortcuts:', error)
+  }
 
   try {
-    // Use keyup so key-repeat while holding Shift never fires duplicates.
     uIOhook.on('keyup', (event) => {
       if (isCapturing) return
       const now = Date.now()
@@ -73,7 +77,7 @@ export function startCaptureListener(onCapture: CaptureHandler, onToggle: () => 
             onCapture('', 'capture')
             return
           }
-          if (text === lastCapturedText && now - lastCaptureAt < 4000) return
+          if (text === lastCapturedText && Date.now() - lastCaptureAt < 4000) return
           lastCapturedText = text
           onCapture(text, 'capture')
         })()
@@ -102,17 +106,21 @@ export function stopCaptureListener(): void {
   } catch {
     // ignore
   }
-  globalShortcut.unregisterAll()
+  try {
+    electron.globalShortcut.unregisterAll()
+  } catch {
+    // ignore
+  }
 }
 
-export function createHudWindow(): BrowserWindow {
-  const display = screen.getPrimaryDisplay()
+export function createHudWindow(): electron.BrowserWindow {
+  const display = electron.screen.getPrimaryDisplay()
   const width = 220
   const height = 56
   const x = Math.round(display.workArea.x + (display.workArea.width - width) / 2)
   const y = Math.round(display.workArea.y + 48)
 
-  const hud = new BrowserWindow({
+  const hud = new electron.BrowserWindow({
     width,
     height,
     x,
@@ -137,7 +145,11 @@ export function createHudWindow(): BrowserWindow {
   return hud
 }
 
-export function showHud(hud: BrowserWindow | null, message: string, rendererUrl: string): void {
+export function showHud(
+  hud: electron.BrowserWindow | null,
+  message: string,
+  rendererUrl: string
+): void {
   if (!hud) return
   const html = `${rendererUrl}?message=${encodeURIComponent(message)}`
   void hud.loadURL(html).then(() => {
@@ -152,9 +164,9 @@ function formatAsList(texts: string[]): string {
   return texts.map((t) => `- ${t.trim()}`).join('\n')
 }
 
-export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
-  ipcMain.handle('cooper:get-state', () => data.getState())
-  ipcMain.handle(
+export function registerIpc(getMainWindow: () => electron.BrowserWindow | null): void {
+  electron.ipcMain.handle('cooper:get-state', () => data.getState())
+  electron.ipcMain.handle(
     'cooper:add-item',
     (
       _e,
@@ -163,7 +175,7 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
       options?: { section?: string; attachments?: CooperAttachment[] }
     ) => data.addItem(text, kind ?? 'note', options)
   )
-  ipcMain.handle(
+  electron.ipcMain.handle(
     'cooper:update-item',
     (
       _e,
@@ -177,10 +189,10 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
       }>
     ) => data.updateItem(id, patch)
   )
-  ipcMain.handle('cooper:remove-item', (_e, id: string) => data.removeItem(id))
-  ipcMain.handle('cooper:remove-items', (_e, ids: string[]) => data.removeItems(ids))
-  ipcMain.handle('cooper:clear-done', () => data.clearDone())
-  ipcMain.handle('cooper:set-settings', (_e, partial: Partial<CooperSettings>) => {
+  electron.ipcMain.handle('cooper:remove-item', (_e, id: string) => data.removeItem(id))
+  electron.ipcMain.handle('cooper:remove-items', (_e, ids: string[]) => data.removeItems(ids))
+  electron.ipcMain.handle('cooper:clear-done', () => data.clearDone())
+  electron.ipcMain.handle('cooper:set-settings', (_e, partial: Partial<CooperSettings>) => {
     const settings = data.setSettings(partial)
     const win = getMainWindow()
     if (win && typeof partial.alwaysOnTop === 'boolean') {
@@ -190,34 +202,37 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
       win.setOpacity(partial.opacity)
     }
     if (typeof partial.launchAtLogin === 'boolean') {
-      app.setLoginItemSettings({ openAtLogin: partial.launchAtLogin, openAsHidden: true })
+      electron.app.setLoginItemSettings({
+        openAtLogin: partial.launchAtLogin,
+        openAsHidden: true
+      })
     }
     return settings
   })
-  ipcMain.handle('cooper:copy-text', (_e, text: string) => {
-    clipboard.writeText(text)
+  electron.ipcMain.handle('cooper:copy-text', (_e, text: string) => {
+    electron.clipboard.writeText(text)
     return true
   })
-  ipcMain.handle('cooper:copy-as-list', (_e, texts: string[]) => {
-    clipboard.writeText(formatAsList(texts))
+  electron.ipcMain.handle('cooper:copy-as-list', (_e, texts: string[]) => {
+    electron.clipboard.writeText(formatAsList(texts))
     return true
   })
-  ipcMain.handle('cooper:pick-files', async () => {
+  electron.ipcMain.handle('cooper:pick-files', async () => {
     const win = getMainWindow()
     const options = {
       properties: ['openFile', 'multiSelections'] as Array<'openFile' | 'multiSelections'>,
       title: 'Attach files to Cooper'
     }
     const picked = win
-      ? await dialog.showOpenDialog(win, options)
-      : await dialog.showOpenDialog(options)
+      ? await electron.dialog.showOpenDialog(win, options)
+      : await electron.dialog.showOpenDialog(options)
     if (picked.canceled) return [] as CooperAttachment[]
     return picked.filePaths.map((p) => data.importAttachment(p))
   })
-  ipcMain.handle('cooper:import-paths', (_e, paths: string[]) => {
+  electron.ipcMain.handle('cooper:import-paths', (_e, paths: string[]) => {
     return paths.map((p) => data.importAttachment(p))
   })
-  ipcMain.handle(
+  electron.ipcMain.handle(
     'cooper:save-buffer',
     (
       _e,
@@ -230,25 +245,27 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
       return data.saveAttachmentBuffer(bytes, payload.fileName, payload.mime)
     }
   )
-  ipcMain.handle('cooper:paste-clipboard', () => {
-    const image = clipboard.readImage()
+  electron.ipcMain.handle('cooper:paste-clipboard', () => {
+    const image = electron.clipboard.readImage()
     if (!image.isEmpty()) {
       const png = image.toPNG()
       const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
       return [data.saveAttachmentBuffer(png, `clipboard-${stamp}.png`, 'image/png')]
     }
 
-    // Windows / macOS may expose file paths on clipboard when copying files.
-    const formats = clipboard.availableFormats()
+    const formats = electron.clipboard.availableFormats()
     if (formats.includes('text/uri-list') || formats.includes('public.file-url')) {
-      const uri = clipboard.read('text/uri-list') || clipboard.read('public.file-url')
+      const uri =
+        electron.clipboard.read('text/uri-list') || electron.clipboard.read('public.file-url')
       const paths = uri
         .split(/\r?\n/)
         .map((line) => line.trim())
         .filter(Boolean)
         .map((line) => {
           try {
-            return decodeURIComponent(line.replace(/^file:\/\//, '').replace(/^\/([A-Za-z]:)/, '$1'))
+            return decodeURIComponent(
+              line.replace(/^file:\/\//, '').replace(/^\/([A-Za-z]:)/, '$1')
+            )
           } catch {
             return ''
           }
@@ -259,11 +276,11 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
 
     return [] as CooperAttachment[]
   })
-  ipcMain.handle('cooper:reveal-attachment', async (_e, filePath: string) => {
-    await shell.showItemInFolder(filePath)
+  electron.ipcMain.handle('cooper:reveal-attachment', async (_e, filePath: string) => {
+    await electron.shell.showItemInFolder(filePath)
     return true
   })
-  ipcMain.handle('cooper:read-attachment-data-url', (_e, filePath: string) => {
+  electron.ipcMain.handle('cooper:read-attachment-data-url', (_e, filePath: string) => {
     const bytes = readFileSync(filePath)
     const ext = pathExtname(filePath).toLowerCase()
     const mime =
@@ -278,31 +295,36 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
               : 'application/octet-stream'
     return `data:${mime};base64,${bytes.toString('base64')}`
   })
-  ipcMain.handle('cooper:open-data-file', async () => {
-    await shell.showItemInFolder(data.getDataFilePath())
+  electron.ipcMain.handle('cooper:open-data-file', async () => {
+    await electron.shell.showItemInFolder(data.getDataFilePath())
     return data.getDataFilePath()
   })
-  ipcMain.handle('cooper:hide-window', () => {
+  electron.ipcMain.handle('cooper:hide-window', () => {
     getMainWindow()?.hide()
   })
 }
 
-export function trayIcon(): Electron.NativeImage {
+export function trayIcon(): electron.NativeImage {
   const size = 16
-  const buf = Buffer.alloc(size * size * 4)
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const dx = x - 7.5
-      const dy = y - 7.5
-      const inside = dx * dx + dy * dy <= 5.2 * 5.2
-      const i = (y * size + x) * 4
+  const scale = 2
+  const px = size * scale
+  const buf = Buffer.alloc(px * px * 4)
+  for (let y = 0; y < px; y++) {
+    for (let x = 0; x < px; x++) {
+      const dx = x - (px - 1) / 2
+      const dy = y - (px - 1) / 2
+      const inside = dx * dx + dy * dy <= (px * 0.32) * (px * 0.32)
+      const i = (y * px + x) * 4
       if (inside) {
-        buf[i] = 23
-        buf[i + 1] = 23
-        buf[i + 2] = 23
+        buf[i] = 20
+        buf[i + 1] = 20
+        buf[i + 2] = 20
         buf[i + 3] = 255
       }
     }
   }
-  return nativeImage.createFromBuffer(buf, { width: size, height: size })
+  return electron.nativeImage.createFromBuffer(buf, { width: px, height: px }).resize({
+    width: size,
+    height: size
+  })
 }

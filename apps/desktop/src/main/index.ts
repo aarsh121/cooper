@@ -1,11 +1,4 @@
-import {
-  app,
-  BrowserWindow,
-  Menu,
-  Tray,
-  nativeTheme,
-  screen
-} from 'electron'
+import * as electron from 'electron'
 import { join } from 'path'
 import {
   createHudWindow,
@@ -17,12 +10,12 @@ import {
 } from './capture'
 import * as data from './store'
 
-let mainWindow: BrowserWindow | null = null
-let hudWindow: BrowserWindow | null = null
-let tray: Tray | null = null
+let mainWindow: electron.BrowserWindow | null = null
+let hudWindow: electron.BrowserWindow | null = null
+let tray: electron.Tray | null = null
 let isQuitting = false
 
-const isDev = !app.isPackaged
+const isDev = !electron.app.isPackaged
 
 function panelUrl(page = 'index.html'): string {
   if (isDev && process.env['ELECTRON_RENDERER_URL']) {
@@ -31,26 +24,26 @@ function panelUrl(page = 'index.html'): string {
   return `file://${join(__dirname, '../renderer', page)}`
 }
 
-function createMainWindow(): BrowserWindow {
-  const display = screen.getPrimaryDisplay()
+function createMainWindow(): electron.BrowserWindow {
+  const display = electron.screen.getPrimaryDisplay()
   const width = 380
   const height = 640
   const x = Math.round(display.workArea.x + display.workArea.width - width - 24)
   const y = Math.round(display.workArea.y + 48)
   const settings = data.getSettings()
 
-  const win = new BrowserWindow({
+  const win = new electron.BrowserWindow({
     width,
     height,
     x,
     y,
     minWidth: 300,
     minHeight: 360,
-    show: false,
+    show: true,
     frame: false,
     transparent: true,
     resizable: true,
-    skipTaskbar: true,
+    skipTaskbar: false,
     alwaysOnTop: settings.alwaysOnTop,
     hasShadow: true,
     backgroundColor: '#00000000',
@@ -72,6 +65,11 @@ function createMainWindow(): BrowserWindow {
 
   win.once('ready-to-show', () => {
     win.show()
+    win.focus()
+  })
+
+  win.webContents.on('did-fail-load', (_e, code, desc) => {
+    console.error('Failed to load Cooper UI:', code, desc)
   })
 
   win.on('close', (event) => {
@@ -95,95 +93,104 @@ function togglePanel(): void {
 }
 
 function createTray(): void {
-  tray = new Tray(trayIcon())
-  tray.setToolTip('Cooper')
-  const contextMenu = Menu.buildFromTemplate([
-    {
-      label: 'Show Cooper',
-      click: () => {
-        mainWindow?.show()
-        mainWindow?.focus()
+  try {
+    tray = new electron.Tray(trayIcon())
+    tray.setToolTip('Cooper')
+    const contextMenu = electron.Menu.buildFromTemplate([
+      {
+        label: 'Show Cooper',
+        click: () => {
+          mainWindow?.show()
+          mainWindow?.focus()
+        }
+      },
+      {
+        label: 'Hide Cooper',
+        click: () => mainWindow?.hide()
+      },
+      { type: 'separator' },
+      {
+        label: 'Open data file',
+        click: () => {
+          electron.shell.showItemInFolder(data.getDataFilePath())
+        }
+      },
+      { type: 'separator' },
+      {
+        label: 'Quit Cooper',
+        click: () => {
+          isQuitting = true
+          electron.app.quit()
+        }
       }
-    },
-    {
-      label: 'Hide Cooper',
-      click: () => mainWindow?.hide()
-    },
-    { type: 'separator' },
-    {
-      label: 'Open data file',
-      click: () => {
-        void import('electron').then(({ shell }) => {
-          shell.showItemInFolder(data.getDataFilePath())
-        })
-      }
-    },
-    { type: 'separator' },
-    {
-      label: 'Quit Cooper',
-      click: () => {
-        isQuitting = true
-        app.quit()
-      }
-    }
-  ])
-  tray.setContextMenu(contextMenu)
-  tray.on('click', () => togglePanel())
+    ])
+    tray.setContextMenu(contextMenu)
+    tray.on('click', () => togglePanel())
+  } catch (error) {
+    console.error('Failed to create tray:', error)
+  }
 }
 
 function broadcastState(): void {
   mainWindow?.webContents.send('cooper:state', data.getState())
 }
 
-app.whenReady().then(() => {
-  nativeTheme.themeSource = 'light'
-  registerIpc(() => mainWindow)
+electron.app.whenReady().then(() => {
+  try {
+    electron.nativeTheme.themeSource = 'light'
+    registerIpc(() => mainWindow)
 
-  mainWindow = createMainWindow()
-  hudWindow = createHudWindow()
-  createTray()
+    mainWindow = createMainWindow()
+    hudWindow = createHudWindow()
+    createTray()
 
-  if (data.getSettings().launchAtLogin) {
-    app.setLoginItemSettings({ openAtLogin: true, openAsHidden: true })
-  }
-
-  startCaptureListener(
-    (text, kind) => {
-      if (!text) {
-        showHud(hudWindow, 'Nothing selected', panelUrl('hud.html'))
-        return
-      }
-      const item = data.addCaptureDeduped(text, kind)
-      if (!item) {
-        showHud(hudWindow, 'Already captured', panelUrl('hud.html'))
-        return
-      }
-      broadcastState()
-      showHud(hudWindow, 'Captured', panelUrl('hud.html'))
-    },
-    () => togglePanel()
-  )
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      mainWindow = createMainWindow()
-    } else {
-      mainWindow?.show()
+    // Don't auto-hide on login for first-run clarity.
+    if (data.getSettings().launchAtLogin) {
+      electron.app.setLoginItemSettings({ openAtLogin: true, openAsHidden: false })
     }
-  })
+
+    try {
+      startCaptureListener(
+        (text, kind) => {
+          if (!text) {
+            showHud(hudWindow, 'Nothing selected', panelUrl('hud.html'))
+            return
+          }
+          const item = data.addCaptureDeduped(text, kind)
+          if (!item) {
+            showHud(hudWindow, 'Already captured', panelUrl('hud.html'))
+            return
+          }
+          broadcastState()
+          showHud(hudWindow, 'Captured', panelUrl('hud.html'))
+        },
+        () => togglePanel()
+      )
+    } catch (error) {
+      console.error('Capture listener failed (UI still available):', error)
+    }
+
+    electron.app.on('activate', () => {
+      if (electron.BrowserWindow.getAllWindows().length === 0) {
+        mainWindow = createMainWindow()
+      } else {
+        mainWindow?.show()
+      }
+    })
+  } catch (error) {
+    console.error('Cooper failed to start:', error)
+  }
 })
 
-app.on('before-quit', () => {
+electron.app.on('before-quit', () => {
   isQuitting = true
   stopCaptureListener()
 })
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    // Keep running in tray on Windows too for sticky-widget feel.
-  }
+electron.app.on('window-all-closed', () => {
+  // Keep running in tray on Windows for sticky-widget feel.
 })
 
-app.on('will-quit', () => {
+electron.app.on('will-quit', () => {
   stopCaptureListener()
 })
