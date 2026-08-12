@@ -134,10 +134,31 @@ export default function App() {
   const [copiedFlash, setCopiedFlash] = useState(false)
   const [pasteHint, setPasteHint] = useState(false)
   const dragDepth = useRef(0)
+  const resizing = useRef(false)
+  const lastResize = useRef({ x: 0, y: 0 })
 
   useEffect(() => {
     void window.tars.getState().then(setState)
     return window.tars.onState(setState)
+  }, [])
+
+  useEffect(() => {
+    function onMove(event: globalThis.MouseEvent): void {
+      if (!resizing.current) return
+      const dx = event.screenX - lastResize.current.x
+      const dy = event.screenY - lastResize.current.y
+      lastResize.current = { x: event.screenX, y: event.screenY }
+      void window.tars.resizeBy({ dx, dy })
+    }
+    function onUp(): void {
+      resizing.current = false
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    return () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
   }, [])
 
   const filtered = useMemo(() => {
@@ -314,7 +335,7 @@ export default function App() {
             <button
               className="menu-btn"
               aria-label="Minimize TARS"
-              title="Minimize"
+              title="Minimize (keeps running in tray)"
               onClick={() => void window.tars.hideWindow()}
             >
               <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden>
@@ -331,6 +352,22 @@ export default function App() {
                 <circle cx="12" cy="6" r="1.6" fill="currentColor" />
                 <circle cx="12" cy="12" r="1.6" fill="currentColor" />
                 <circle cx="12" cy="18" r="1.6" fill="currentColor" />
+              </svg>
+            </button>
+            <button
+              className="menu-btn menu-btn-close"
+              aria-label="Quit TARS"
+              title="Quit TARS"
+              onClick={() => void window.tars.quitApp()}
+            >
+              <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden>
+                <path
+                  d="M7 7l10 10M17 7L7 17"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                />
               </svg>
             </button>
           </div>
@@ -370,7 +407,16 @@ export default function App() {
                 void window.tars.hideWindow()
               }}
             >
-              Minimize TARS
+              Minimize to tray
+            </button>
+            <button
+              className="danger"
+              onClick={() => {
+                setMenuOpen(false)
+                void window.tars.quitApp()
+              }}
+            >
+              Quit TARS
             </button>
           </div>
         ) : null}
@@ -477,6 +523,16 @@ export default function App() {
         </div>
 
         {dragging ? <div className="drop-overlay">Drop files to attach</div> : null}
+        <div
+          className="resize-grip"
+          title="Drag to resize"
+          aria-label="Resize window"
+          onMouseDown={(event) => {
+            event.preventDefault()
+            resizing.current = true
+            lastResize.current = { x: event.screenX, y: event.screenY }
+          }}
+        />
       </div>
     </div>
   )

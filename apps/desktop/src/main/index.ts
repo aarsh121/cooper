@@ -26,7 +26,7 @@ function panelUrl(page = 'index.html'): string {
 
 function createMainWindow(): electron.BrowserWindow {
   const display = electron.screen.getPrimaryDisplay()
-  const width = 380
+  const width = 400
   const height = 640
   const x = Math.round(display.workArea.x + display.workArea.width - width - 24)
   const y = Math.round(display.workArea.y + 48)
@@ -37,12 +37,16 @@ function createMainWindow(): electron.BrowserWindow {
     height,
     x,
     y,
-    minWidth: 300,
-    minHeight: 360,
+    minWidth: 320,
+    minHeight: 420,
+    maxWidth: 720,
+    maxHeight: 1000,
     show: true,
     frame: false,
     transparent: true,
     resizable: true,
+    maximizable: false,
+    fullscreenable: false,
     skipTaskbar: false,
     alwaysOnTop: settings.alwaysOnTop,
     hasShadow: true,
@@ -57,6 +61,7 @@ function createMainWindow(): electron.BrowserWindow {
   })
 
   win.setOpacity(settings.opacity)
+  win.setResizable(true)
   if (settings.alwaysOnTop) {
     win.setAlwaysOnTop(true, 'floating')
   }
@@ -139,6 +144,24 @@ electron.app.whenReady().then(() => {
   try {
     electron.nativeTheme.themeSource = 'light'
     registerIpc(() => mainWindow)
+
+    electron.ipcMain.handle('cooper:quit-app', () => {
+      isQuitting = true
+      stopCaptureListener()
+      electron.app.quit()
+    })
+
+    electron.ipcMain.handle(
+      'cooper:resize-by',
+      (_e, delta: { dx: number; dy: number }) => {
+        if (!mainWindow) return false
+        const [width, height] = mainWindow.getSize()
+        const nextW = Math.min(720, Math.max(320, width + Math.round(delta.dx)))
+        const nextH = Math.min(1000, Math.max(420, height + Math.round(delta.dy)))
+        mainWindow.setSize(nextW, nextH)
+        return true
+      }
+    )
 
     mainWindow = createMainWindow()
     hudWindow = createHudWindow()

@@ -46,6 +46,9 @@ const api = {
     ipcRenderer.invoke('cooper:read-attachment-data-url', filePath),
   openDataFile: (): Promise<string> => ipcRenderer.invoke('cooper:open-data-file'),
   hideWindow: (): Promise<void> => ipcRenderer.invoke('cooper:hide-window'),
+  quitApp: (): Promise<void> => ipcRenderer.invoke('cooper:quit-app'),
+  resizeBy: (delta: { dx: number; dy: number }): Promise<boolean> =>
+    ipcRenderer.invoke('cooper:resize-by', delta),
   onState: (callback: (state: CooperState) => void): (() => void) => {
     const listener = (_event: Electron.IpcRendererEvent, state: CooperState): void => {
       callback(state)

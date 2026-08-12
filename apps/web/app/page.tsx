@@ -39,7 +39,7 @@ export default function HomePage() {
       <section className="demo-section" id="demo">
         <InteractiveDemo />
         <p className="demo-hint">
-          Click a card to select · circle to check off · capture button · copy for chat
+          Watch the loop — or click in and try capture / select yourself
         </p>
       </section>
 
