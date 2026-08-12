@@ -1,0 +1,29 @@
+{
+  "name": "cooper",
+  "private": true,
+  "version": "1.0.0",
+  "description": "A sticky widget for AI-assisted work — capture, checklist, and scratchpad.",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev -w @cooper/web",
+    "dev:desktop": "npm run dev -w @cooper/desktop",
+    "build:web": "npm run build -w @cooper/web",
+    "build:desktop": "npm run build -w @cooper/desktop",
+    "pack:win": "npm run pack:win -w @cooper/desktop",
+    "pack:mac": "npm run pack:mac -w @cooper/desktop"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "electron": "^35.0.1"
+  },
+  "allowScripts": {
+    "electron@35.0.1": true,
+    "esbuild@0.25.12": true,
+    "sharp@0.34.5": true,
+    "uiohook-napi@1.5.5": true
+  }
+}

@@ -1,0 +1,4 @@
+{
+  "framework": "nextjs",
+  "installCommand": "npm install --workspace=@cooper/web --include-workspace-root"
+}

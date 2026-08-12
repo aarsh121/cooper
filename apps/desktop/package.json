@@ -1,0 +1,105 @@
+{
+  "name": "@cooper/desktop",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cooper sticky widget desktop app",
+  "author": "Cooper",
+  "main": "out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "pack:win": "npm run build && electron-builder --win nsis --x64 --config.electronVersion=35.0.1",
+    "pack:mac": "npm run build && electron-builder --mac dmg zip --universal --config.electronVersion=35.0.1",
+    "pack:all": "npm run build && electron-builder --win nsis --mac dmg --config.electronVersion=35.0.1"
+  },
+  "dependencies": {
+    "electron-store": "^8.2.0",
+    "uiohook-napi": "^1.5.4",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "@types/uuid": "^10.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "electron": "35.0.1",
+    "electron-builder": "^25.1.8",
+    "electron-vite": "^3.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "typescript": "^5.8.2",
+    "vite": "^6.2.0"
+  },
+  "build": {
+    "appId": "com.cooper.app",
+    "productName": "Cooper",
+    "electronVersion": "35.0.1",
+    "npmRebuild": false,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "out/**/*"
+    ],
+    "win": {
+      "signAndEditExecutable": false,
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "Cooper-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Cooper"
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.productivity",
+      "hardenedRuntime": true,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "extendInfo": {
+        "NSAppleEventsUsageDescription": "Cooper needs Accessibility access to capture selected text and listen for shortcuts.",
+        "NSAccessibilityUsageDescription": "Cooper needs Accessibility access to read your text selection and listen for its shortcuts."
+      },
+      "artifactName": "Cooper-${version}-mac.${ext}"
+    },
+    "dmg": {
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ]
+    }
+  }
+}
