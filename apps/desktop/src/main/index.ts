@@ -47,7 +47,7 @@ function createMainWindow(): electron.BrowserWindow {
     alwaysOnTop: settings.alwaysOnTop,
     hasShadow: true,
     backgroundColor: '#00000000',
-    title: 'Cooper',
+    title: 'TARS',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
@@ -69,7 +69,7 @@ function createMainWindow(): electron.BrowserWindow {
   })
 
   win.webContents.on('did-fail-load', (_e, code, desc) => {
-    console.error('Failed to load Cooper UI:', code, desc)
+    console.error('Failed to load TARS UI:', code, desc)
   })
 
   win.on('close', (event) => {
@@ -95,17 +95,17 @@ function togglePanel(): void {
 function createTray(): void {
   try {
     tray = new electron.Tray(trayIcon())
-    tray.setToolTip('Cooper')
+    tray.setToolTip('TARS')
     const contextMenu = electron.Menu.buildFromTemplate([
       {
-        label: 'Show Cooper',
+        label: 'Show TARS',
         click: () => {
           mainWindow?.show()
           mainWindow?.focus()
         }
       },
       {
-        label: 'Hide Cooper',
+        label: 'Minimize TARS',
         click: () => mainWindow?.hide()
       },
       { type: 'separator' },
@@ -117,7 +117,7 @@ function createTray(): void {
       },
       { type: 'separator' },
       {
-        label: 'Quit Cooper',
+        label: 'Quit TARS',
         click: () => {
           isQuitting = true
           electron.app.quit()
@@ -178,7 +178,7 @@ electron.app.whenReady().then(() => {
       }
     })
   } catch (error) {
-    console.error('Cooper failed to start:', error)
+    console.error('TARS failed to start:', error)
   }
 })
 

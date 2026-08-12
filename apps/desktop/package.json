@@ -2,8 +2,8 @@
   "name": "@cooper/desktop",
   "version": "1.0.0",
   "private": true,
-  "description": "Cooper sticky widget desktop app",
-  "author": "Cooper",
+  "description": "TARS sticky widget desktop app",
+  "author": "TARS",
   "main": "out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
@@ -32,8 +32,8 @@
     "vite": "^6.2.0"
   },
   "build": {
-    "appId": "com.cooper.app",
-    "productName": "Cooper",
+    "appId": "com.tars.app",
+    "productName": "TARS",
     "electronVersion": "35.0.1",
     "npmRebuild": false,
     "directories": {
@@ -64,14 +64,14 @@
           ]
         }
       ],
-      "artifactName": "Cooper-Setup-${version}.${ext}"
+      "artifactName": "TARS-Setup-${version}.${ext}"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Cooper"
+      "shortcutName": "TARS"
     },
     "mac": {
       "target": [
@@ -83,10 +83,10 @@
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist",
       "extendInfo": {
-        "NSAppleEventsUsageDescription": "Cooper needs Accessibility access to capture selected text and listen for shortcuts.",
-        "NSAccessibilityUsageDescription": "Cooper needs Accessibility access to read your text selection and listen for its shortcuts."
+        "NSAppleEventsUsageDescription": "TARS needs Accessibility access to capture selected text and listen for shortcuts.",
+        "NSAccessibilityUsageDescription": "TARS needs Accessibility access to read your text selection and listen for its shortcuts."
       },
-      "artifactName": "Cooper-${version}-mac.${ext}"
+      "artifactName": "TARS-${version}-mac.${ext}"
     },
     "dmg": {
       "contents": [

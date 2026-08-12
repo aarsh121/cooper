@@ -15,11 +15,11 @@ const display = Newsreader({
 })
 
 export const metadata: Metadata = {
-  title: 'Cooper — sticky pad for AI work',
+  title: 'TARS — sticky pad for AI work',
   description:
     'Capture prompts, answers, and files into a local sticky widget. Copy as a list into ChatGPT, Claude, or Cursor.',
   openGraph: {
-    title: 'Cooper',
+    title: 'TARS',
     description: 'A sticky prompt backlog for AI-assisted work. Local-first. Windows + Mac.',
     type: 'website'
   }

@@ -1,7 +1,8 @@
-import type { CooperApi } from '../../preload/index'
+import type { CooperApi, TarsApi } from '../../preload/index'
 
 declare global {
   interface Window {
+    tars: TarsApi
     cooper: CooperApi
   }
 }

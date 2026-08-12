@@ -1,4 +1,4 @@
-name: Release Cooper
+name: Release TARS
 
 on:
   push:

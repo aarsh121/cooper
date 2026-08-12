@@ -26,6 +26,11 @@ const api = {
   copyText: (text: string): Promise<boolean> => ipcRenderer.invoke('cooper:copy-text', text),
   copyAsList: (texts: string[]): Promise<boolean> =>
     ipcRenderer.invoke('cooper:copy-as-list', texts),
+  copySelection: (payload: {
+    texts: string[]
+    imagePaths: string[]
+  }): Promise<{ copiedText: boolean; copiedImages: number }> =>
+    ipcRenderer.invoke('cooper:copy-selection', payload),
   pickFiles: (): Promise<CooperAttachment[]> => ipcRenderer.invoke('cooper:pick-files'),
   importPaths: (paths: string[]): Promise<CooperAttachment[]> =>
     ipcRenderer.invoke('cooper:import-paths', paths),
@@ -37,7 +42,7 @@ const api = {
   pasteClipboard: (): Promise<CooperAttachment[]> => ipcRenderer.invoke('cooper:paste-clipboard'),
   revealAttachment: (filePath: string): Promise<boolean> =>
     ipcRenderer.invoke('cooper:reveal-attachment', filePath),
-  readAttachmentDataUrl: (filePath: string): Promise<string> =>
+  readAttachmentDataUrl: (filePath: string): Promise<string | null> =>
     ipcRenderer.invoke('cooper:read-attachment-data-url', filePath),
   openDataFile: (): Promise<string> => ipcRenderer.invoke('cooper:open-data-file'),
   hideWindow: (): Promise<void> => ipcRenderer.invoke('cooper:hide-window'),
@@ -50,6 +55,9 @@ const api = {
   }
 }
 
+contextBridge.exposeInMainWorld('tars', api)
+// Keep legacy alias during rename.
 contextBridge.exposeInMainWorld('cooper', api)
 
-export type CooperApi = typeof api
+export type TarsApi = typeof api
+export type CooperApi = TarsApi

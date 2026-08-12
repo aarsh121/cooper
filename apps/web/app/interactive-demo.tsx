@@ -132,7 +132,7 @@ export function InteractiveDemo() {
           </button>
         </div>
 
-        <div className="demo-widget" aria-label="Cooper interactive demo">
+        <div className="demo-widget" aria-label="TARS interactive demo">
           <div className="dw-top">
             <label className="dw-search">
               <span aria-hidden>⌕</span>

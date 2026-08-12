@@ -2,9 +2,9 @@ import { InteractiveDemo } from './interactive-demo'
 
 const RELEASES = 'https://github.com/aarsh121/cooper/releases'
 const WIN_INSTALLER =
-  'https://github.com/aarsh121/cooper/releases/latest/download/Cooper-Setup-1.0.0.exe'
+  'https://github.com/aarsh121/cooper/releases/latest/download/TARS-Setup-1.0.0.exe'
 const MAC_INSTALLER =
-  'https://github.com/aarsh121/cooper/releases/latest/download/Cooper-1.0.0-mac.dmg'
+  'https://github.com/aarsh121/cooper/releases/latest/download/TARS-1.0.0-mac.dmg'
 
 export default function HomePage() {
   return (
@@ -12,7 +12,7 @@ export default function HomePage() {
       <header className="nav">
         <a className="logo" href="/">
           <span className="mark" aria-hidden />
-          Cooper
+          TARS
         </a>
         <a className="nav-cta" href="#download">
           Download
@@ -21,7 +21,7 @@ export default function HomePage() {
 
       <section className="hero">
         <p className="eyebrow">Free · local sticky widget</p>
-        <h1>Cooper</h1>
+        <h1>TARS</h1>
         <p className="lede">
           Queue prompts as they appear. Capture with Shift twice. Paste images. Copy a list
           back into ChatGPT, Claude, or Cursor when you&apos;re ready.
@@ -39,14 +39,14 @@ export default function HomePage() {
       <section className="demo-section" id="demo">
         <InteractiveDemo />
         <p className="demo-hint">
-          Click a card to select · circle to check off · capture button · copy as list
+          Click a card to select · circle to check off · capture button · copy for chat
         </p>
       </section>
 
       <section className="points">
         <article>
           <h2>Capture</h2>
-          <p>Select anywhere. Tap Shift twice. Cooper keeps it without breaking your flow.</p>
+          <p>Select anywhere. Tap Shift twice. TARS keeps it without breaking your flow.</p>
         </article>
         <article>
           <h2>Backlog</h2>
@@ -54,7 +54,7 @@ export default function HomePage() {
         </article>
         <article>
           <h2>Route</h2>
-          <p>Select a few items, copy as a list, paste into your agent. Check them off.</p>
+          <p>Select a few items, copy for chat, paste into your agent. Check them off.</p>
         </article>
       </section>
 
@@ -65,9 +65,7 @@ export default function HomePage() {
 
       <section className="download" id="download">
         <h2>Free for Windows + Mac.</h2>
-        <p>
-          Grab the installer from GitHub Releases. Open source builds — install and go.
-        </p>
+        <p>Grab the installer from GitHub Releases. Install and go.</p>
         <div className="actions">
           <a className="btn primary" href={WIN_INSTALLER}>
             Download for Windows
@@ -83,29 +81,27 @@ export default function HomePage() {
         <div className="mac-note">
           <h3>macOS first launch</h3>
           <p>
-            Cooper is not notarized yet, so macOS Gatekeeper may block it. After downloading the
+            TARS is not notarized yet, so macOS Gatekeeper may block it. After downloading the
             `.dmg`, run:
           </p>
           <pre>
-            <code>{`xattr -cr /Applications/Cooper.app`}</code>
+            <code>{`xattr -cr /Applications/TARS.app`}</code>
           </pre>
-          <p>
-            Or, if you open it from the mounted disk image first:
-          </p>
+          <p>Or, if you open it from the mounted disk image first:</p>
           <pre>
-            <code>{`xattr -cr /Volumes/Cooper*/Cooper.app
-# then drag Cooper into Applications`}</code>
+            <code>{`xattr -cr /Volumes/TARS*/TARS.app
+# then drag TARS into Applications`}</code>
           </pre>
           <p>
-            Then open Cooper, and grant <strong>Accessibility</strong> when asked (needed for
+            Then open TARS, and grant <strong>Accessibility</strong> when asked (needed for
             Shift-twice capture).
           </p>
         </div>
       </section>
 
       <footer className="footer">
-        <span>© {new Date().getFullYear()} Cooper · Free</span>
-        <span>Inspired by Copper · not affiliated</span>
+        <span>© {new Date().getFullYear()} TARS · Free</span>
+        <span>Local-first sticky widget</span>
       </footer>
     </main>
   )

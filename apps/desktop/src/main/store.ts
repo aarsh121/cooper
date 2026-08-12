@@ -19,7 +19,7 @@ type StoreSchema = {
 }
 
 const store = new Store<StoreSchema>({
-  name: 'cooper-data',
+  name: 'tars-data',
   defaults: {
     items: [],
     settings: DEFAULT_SETTINGS

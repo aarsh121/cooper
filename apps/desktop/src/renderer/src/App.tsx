@@ -22,8 +22,11 @@ function renderRichText(text: string): React.ReactNode[] {
 }
 
 function itemCopyText(item: CooperItem): string {
-  const files = item.attachments.map((f) => `📎 ${f.name}`).join('\n')
-  return [item.text, files].filter(Boolean).join('\n')
+  const text = item.text?.trim()
+  if (text && text !== 'Image') return text
+  if (item.attachments.some(isImageAttachment)) return ''
+  const files = item.attachments.map((f) => f.name).join(', ')
+  return files
 }
 
 function groupBySection(items: CooperItem[]): { section: string; items: CooperItem[] }[] {
@@ -51,19 +54,24 @@ function AttachmentPreview({
   onOpen?: () => void
 }) {
   const [src, setSrc] = useState<string | null>(null)
+  const [failed, setFailed] = useState(false)
 
   useEffect(() => {
     if (!isImageAttachment(file)) return
     let alive = true
-    void window.cooper.readAttachmentDataUrl(file.path).then((url) => {
-      if (alive) setSrc(url)
+    setFailed(false)
+    setSrc(null)
+    void window.tars.readAttachmentDataUrl(file.path).then((url) => {
+      if (!alive) return
+      if (url) setSrc(url)
+      else setFailed(true)
     })
     return () => {
       alive = false
     }
   }, [file.path, file.mime, file.name])
 
-  if (isImageAttachment(file) && src) {
+  if (isImageAttachment(file) && !failed) {
     return (
       <button
         type="button"
@@ -74,7 +82,15 @@ function AttachmentPreview({
           onOpen?.()
         }}
       >
-        <img src={src} alt={file.name} />
+        {src ? (
+          <img
+            src={src}
+            alt={file.name}
+            onError={() => setFailed(true)}
+          />
+        ) : (
+          <span className="image-chip-loading" />
+        )}
         {onRemove ? (
           <span
             className="image-chip-x"
@@ -120,8 +136,8 @@ export default function App() {
   const dragDepth = useRef(0)
 
   useEffect(() => {
-    void window.cooper.getState().then(setState)
-    return window.cooper.onState(setState)
+    void window.tars.getState().then(setState)
+    return window.tars.onState(setState)
   }, [])
 
   const filtered = useMemo(() => {
@@ -139,7 +155,7 @@ export default function App() {
   const groups = useMemo(() => groupBySection(filtered), [filtered])
 
   async function refresh(): Promise<void> {
-    setState(await window.cooper.getState())
+    setState(await window.tars.getState())
   }
 
   async function queueAttachments(files: CooperAttachment[]): Promise<void> {
@@ -160,7 +176,7 @@ export default function App() {
         const file = item.getAsFile()
         if (!file) continue
         const buffer = await file.arrayBuffer()
-        const attachment = await window.cooper.saveBuffer({
+        const attachment = await window.tars.saveBuffer({
           bytes: buffer,
           fileName: file.name || `paste-${Date.now()}.png`,
           mime: file.type || undefined
@@ -178,7 +194,7 @@ export default function App() {
   }
 
   async function pasteFromNativeClipboard(): Promise<void> {
-    const files = await window.cooper.pasteClipboard()
+    const files = await window.tars.pasteClipboard()
     await queueAttachments(files)
   }
 
@@ -187,7 +203,7 @@ export default function App() {
     if (handled) return
 
     // Screenshots / OS clipboard images often don't appear in clipboardData on Windows.
-    const nativeFiles = await window.cooper.pasteClipboard()
+    const nativeFiles = await window.tars.pasteClipboard()
     if (nativeFiles.length) {
       event.preventDefault()
       await queueAttachments(nativeFiles)
@@ -198,7 +214,7 @@ export default function App() {
     event.preventDefault()
     const text = draft.trim()
     if (!text && pendingFiles.length === 0) return
-    await window.cooper.addItem(text || 'Image', pendingFiles.length ? 'file' : 'note', {
+    await window.tars.addItem(text || 'Image', pendingFiles.length ? 'file' : 'note', {
       attachments: pendingFiles
     })
     setDraft('')
@@ -217,32 +233,39 @@ export default function App() {
 
   async function toggleDone(item: CooperItem, event: MouseEvent): Promise<void> {
     event.stopPropagation()
-    await window.cooper.updateItem(item.id, { done: !item.done })
+    await window.tars.updateItem(item.id, { done: !item.done })
     await refresh()
   }
 
   async function copySelectedAsList(): Promise<void> {
-    const texts = state.items.filter((item) => selected.has(item.id)).map(itemCopyText)
-    if (texts.length === 0) return
-    await window.cooper.copyAsList(texts)
+    const selectedItems = state.items.filter((item) => selected.has(item.id))
+    if (selectedItems.length === 0) return
+    const texts = selectedItems.map(itemCopyText).filter(Boolean)
+    const imagePaths = selectedItems.flatMap((item) =>
+      item.attachments.filter(isImageAttachment).map((f) => f.path)
+    )
+    const result = await window.tars.copySelection({ texts, imagePaths })
     setCopiedFlash(true)
     window.setTimeout(() => setCopiedFlash(false), 1200)
+    if (result.copiedImages > 0 && !result.copiedText) {
+      // image-only copy still shows Copied
+    }
   }
 
   async function deleteSelected(): Promise<void> {
-    await window.cooper.removeItems([...selected])
+    await window.tars.removeItems([...selected])
     setSelected(new Set())
     await refresh()
   }
 
   async function attachFiles(): Promise<void> {
-    const files = await window.cooper.pickFiles()
+    const files = await window.tars.pickFiles()
     if (files.length) setPendingFiles((prev) => [...prev, ...files])
   }
 
   async function onDropFiles(paths: string[]): Promise<void> {
     if (!paths.length) return
-    const files = await window.cooper.importPaths(paths)
+    const files = await window.tars.importPaths(paths)
     setPendingFiles((prev) => [...prev, ...files])
   }
 
@@ -287,9 +310,19 @@ export default function App() {
               placeholder="Search"
             />
           </label>
-          <button className="menu-btn" aria-label="Menu" onClick={() => setMenuOpen((v) => !v)}>
-            ···
-          </button>
+          <div className="top-actions">
+            <button
+              className="menu-btn"
+              aria-label="Minimize TARS"
+              title="Minimize"
+              onClick={() => void window.tars.hideWindow()}
+            >
+              −
+            </button>
+            <button className="menu-btn" aria-label="Menu" onClick={() => setMenuOpen((v) => !v)}>
+              ···
+            </button>
+          </div>
         </div>
 
         {menuOpen ? (
@@ -297,7 +330,7 @@ export default function App() {
             <button
               onClick={() => {
                 setMenuOpen(false)
-                void window.cooper.setSettings({ alwaysOnTop: !state.settings.alwaysOnTop }).then(
+                void window.tars.setSettings({ alwaysOnTop: !state.settings.alwaysOnTop }).then(
                   (settings) => setState((prev) => ({ ...prev, settings }))
                 )
               }}
@@ -307,7 +340,7 @@ export default function App() {
             <button
               onClick={() => {
                 setMenuOpen(false)
-                void window.cooper.openDataFile()
+                void window.tars.openDataFile()
               }}
             >
               Reveal data file
@@ -315,7 +348,7 @@ export default function App() {
             <button
               onClick={() => {
                 setMenuOpen(false)
-                void window.cooper.clearDone().then(refresh)
+                void window.tars.clearDone().then(refresh)
               }}
             >
               Clear done
@@ -323,10 +356,10 @@ export default function App() {
             <button
               onClick={() => {
                 setMenuOpen(false)
-                void window.cooper.hideWindow()
+                void window.tars.hideWindow()
               }}
             >
-              Hide Cooper
+              Minimize TARS
             </button>
           </div>
         ) : null}
@@ -364,7 +397,7 @@ export default function App() {
                               <AttachmentPreview
                                 key={file.id}
                                 file={file}
-                                onOpen={() => void window.cooper.revealAttachment(file.path)}
+                                onOpen={() => void window.tars.revealAttachment(file.path)}
                               />
                             ))}
                           </div>
@@ -382,7 +415,7 @@ export default function App() {
           <div className="selection-bar">
             <span>{selected.size} selected</span>
             <button className="primary" onClick={() => void copySelectedAsList()}>
-              {copiedFlash ? 'Copied list' : 'Copy as list'}
+              {copiedFlash ? 'Copied' : 'Copy for chat'}
             </button>
             <button onClick={() => void deleteSelected()}>Delete</button>
             <button onClick={() => setSelected(new Set())}>Clear</button>

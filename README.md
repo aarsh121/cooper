@@ -1,19 +1,17 @@
-# Cooper
+# TARS
 
 A sticky widget for AI-assisted work — part to-do list, part clipboard, part scratchpad.
 
-Select something worth keeping anywhere on your machine, tap **Shift twice**, and Cooper captures it. Jot the next prompts you want to try, copy them into ChatGPT / Claude / Cursor, and check them off as you go.
+Select something worth keeping anywhere on your machine, tap **Shift twice**, and TARS captures it. Jot the next prompts you want to try, copy them into ChatGPT / Claude / Cursor, and check them off as you go.
 
 **Local-first.** No account. No sync. No telemetry. Notes live in a file on your computer.
-
-Inspired by [Copper](https://shadcn.com/copper) by shadcn.
 
 ## What's in this repo
 
 | Path | What it is |
 |------|------------|
 | `apps/desktop` | Electron sticky widget (Windows `.exe` installer + macOS `.dmg`) |
-| `apps/web` | Premium marketing site (deploy to Vercel) |
+| `apps/web` | Marketing site (deploy to Vercel) |
 
 ## Features
 
@@ -21,8 +19,8 @@ Inspired by [Copper](https://shadcn.com/copper) by shadcn.
 - Double **Left Shift** → capture current text selection
 - Double **Right Shift** → show / hide panel
 - Fallback shortcuts: `Ctrl/⌘⇧C` capture, `Ctrl/⌘⇧Space` toggle
-- Checklist + scratchpad items with one-click copy
-- System tray presence
+- Paste images from clipboard
+- Multi-select → copy for chat (text + real images)
 - Local JSON storage only
 
 ## Quick start
@@ -36,14 +34,12 @@ npm run dev:web       # landing page at http://localhost:3000
 ### Build installers
 
 ```bash
-# Windows NSIS installer → apps/desktop/release/Cooper-Setup-1.0.0.exe
+# Windows NSIS installer → apps/desktop/release/TARS-Setup-1.0.0.exe
 npm run pack:win
 
 # macOS DMG (run on macOS or via GitHub Actions on tag push)
 npm run pack:mac
 ```
-
-First Windows pack may need Developer Mode if electron-builder hits symlink errors; this repo sets `signAndEditExecutable: false` for local unsigned builds. Signed releases should run through GitHub Actions.
 
 ## Download (free)
 
@@ -51,10 +47,10 @@ Installers are published on [GitHub Releases](https://github.com/aarsh121/cooper
 
 ### macOS Gatekeeper
 
-Cooper is not notarized yet. After installing, clear quarantine flags:
+TARS is not notarized yet. After installing, clear quarantine flags:
 
 ```bash
-xattr -cr /Applications/Cooper.app
+xattr -cr /Applications/TARS.app
 ```
 
 Then grant **Accessibility** access when prompted.
@@ -67,20 +63,13 @@ Then grant **Accessibility** access when prompted.
 4. Framework: Next.js (auto-detected).
 5. Deploy.
 
-Or from the CLI:
-
-```bash
-cd apps/web
-npx vercel
-```
-
 ## Privacy
 
-Cooper never phones home. Your notes stay in:
+TARS never phones home. Your notes stay in:
 
-- Windows: `%APPDATA%/cooper-data.json` (via electron-store)
-- macOS: `~/Library/Application Support/cooper-data.json`
+- Windows: `%APPDATA%/tars-data.json` (via electron-store)
+- macOS: `~/Library/Application Support/tars-data.json`
 
 ## License
 
-Private / your project. Not affiliated with shadcn or Vercel.
+MIT-style / your project.

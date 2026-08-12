@@ -1,5 +1,5 @@
 import * as electron from 'electron'
-import { readFileSync } from 'fs'
+import { readFileSync, existsSync } from 'fs'
 import { extname as pathExtname } from 'path'
 import { uIOhook, UiohookKey } from 'uiohook-napi'
 import * as data from './store'
@@ -217,11 +217,51 @@ export function registerIpc(getMainWindow: () => electron.BrowserWindow | null):
     electron.clipboard.writeText(formatAsList(texts))
     return true
   })
+  electron.ipcMain.handle(
+    'cooper:copy-selection',
+    (
+      _e,
+      payload: {
+        texts: string[]
+        imagePaths: string[]
+      }
+    ) => {
+      const text = formatAsList(payload.texts.filter((t) => t.trim()))
+      const images = (payload.imagePaths || [])
+        .map((p) => electron.nativeImage.createFromPath(p))
+        .filter((img) => !img.isEmpty())
+
+      if (images.length === 0) {
+        electron.clipboard.writeText(text || '')
+        return { copiedText: Boolean(text), copiedImages: 0 }
+      }
+
+      if (images.length === 1) {
+        const payloadWrite: Electron.Data = { image: images[0] }
+        if (text) payloadWrite.text = text
+        electron.clipboard.write(payloadWrite)
+        return { copiedText: Boolean(text), copiedImages: 1 }
+      }
+
+      const htmlImages = images
+        .map((img) => {
+          const b64 = img.toPNG().toString('base64')
+          return `<p><img src="data:image/png;base64,${b64}" /></p>`
+        })
+        .join('')
+      electron.clipboard.write({
+        text: text || `${images.length} images`,
+        html: `<div>${htmlImages}${text ? `<pre>${text}</pre>` : ''}</div>`,
+        image: images[0]
+      })
+      return { copiedText: Boolean(text), copiedImages: images.length }
+    }
+  )
   electron.ipcMain.handle('cooper:pick-files', async () => {
     const win = getMainWindow()
     const options = {
       properties: ['openFile', 'multiSelections'] as Array<'openFile' | 'multiSelections'>,
-      title: 'Attach files to Cooper'
+      title: 'Attach files to TARS'
     }
     const picked = win
       ? await electron.dialog.showOpenDialog(win, options)
@@ -281,19 +321,28 @@ export function registerIpc(getMainWindow: () => electron.BrowserWindow | null):
     return true
   })
   electron.ipcMain.handle('cooper:read-attachment-data-url', (_e, filePath: string) => {
-    const bytes = readFileSync(filePath)
-    const ext = pathExtname(filePath).toLowerCase()
-    const mime =
-      ext === '.jpg' || ext === '.jpeg'
-        ? 'image/jpeg'
-        : ext === '.gif'
-          ? 'image/gif'
-          : ext === '.webp'
-            ? 'image/webp'
-            : ext === '.png'
-              ? 'image/png'
-              : 'application/octet-stream'
-    return `data:${mime};base64,${bytes.toString('base64')}`
+    try {
+      if (!existsSync(filePath)) {
+        console.error('Attachment missing:', filePath)
+        return null
+      }
+      const bytes = readFileSync(filePath)
+      const ext = pathExtname(filePath).toLowerCase()
+      const mime =
+        ext === '.jpg' || ext === '.jpeg'
+          ? 'image/jpeg'
+          : ext === '.gif'
+            ? 'image/gif'
+            : ext === '.webp'
+              ? 'image/webp'
+              : ext === '.png'
+                ? 'image/png'
+                : 'application/octet-stream'
+      return `data:${mime};base64,${bytes.toString('base64')}`
+    } catch (error) {
+      console.error('Failed to read attachment:', filePath, error)
+      return null
+    }
   })
   electron.ipcMain.handle('cooper:open-data-file', async () => {
     await electron.shell.showItemInFolder(data.getDataFilePath())
