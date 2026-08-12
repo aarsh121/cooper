@@ -45,10 +45,19 @@ npm run pack:mac
 
 First Windows pack may need Developer Mode if electron-builder hits symlink errors; this repo sets `signAndEditExecutable: false` for local unsigned builds. Signed releases should run through GitHub Actions.
 
-## Permissions
+## Download (free)
 
-- **macOS 14+**: grant Accessibility so Cooper can read the current selection and listen for Shift gestures.
-- **Windows**: first launch may prompt for accessibility / input monitoring depending on OS policy.
+Installers are published on [GitHub Releases](https://github.com/aarsh121/cooper/releases).
+
+### macOS Gatekeeper
+
+Cooper is not notarized yet. After installing, clear quarantine flags:
+
+```bash
+xattr -cr /Applications/Cooper.app
+```
+
+Then grant **Accessibility** access when prompted.
 
 ## Deploy the site to Vercel
 

@@ -465,6 +465,44 @@ input {
   line-height: 1.55;
 }
 
+.mac-note {
+  margin-top: 28px;
+  padding: 20px 22px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid var(--line);
+  max-width: 40rem;
+}
+
+.mac-note h3 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  letter-spacing: -0.02em;
+}
+
+.mac-note p {
+  margin: 0 0 12px;
+}
+
+.mac-note p:last-child {
+  margin-bottom: 0;
+}
+
+.mac-note pre {
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #141414;
+  color: #f5f5f0;
+  overflow-x: auto;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.mac-note code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
 .footer {
   display: flex;
   justify-content: space-between;

@@ -1,22 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-/**
- * Placeholder download endpoint.
- * Point these env vars at your GitHub Release assets after first publish:
- *   COOPER_WIN_URL, COOPER_MAC_URL
- */
+const RELEASES = 'https://github.com/aarsh121/cooper/releases/latest'
+const WIN =
+  process.env.COOPER_WIN_URL ||
+  'https://github.com/aarsh121/cooper/releases/latest/download/Cooper-Setup-1.0.0.exe'
+const MAC =
+  process.env.COOPER_MAC_URL ||
+  'https://github.com/aarsh121/cooper/releases/latest/download/Cooper-1.0.0-mac.dmg'
+
 export async function GET(request: NextRequest) {
   const platform = request.nextUrl.searchParams.get('platform')
-  const win = process.env.COOPER_WIN_URL
-  const mac = process.env.COOPER_MAC_URL
 
-  if (platform === 'win' && win) {
-    return NextResponse.redirect(win)
+  if (platform === 'win') {
+    return NextResponse.redirect(WIN)
   }
-  if (platform === 'mac' && mac) {
-    return NextResponse.redirect(mac)
+  if (platform === 'mac') {
+    return NextResponse.redirect(MAC)
   }
 
-  const repo = process.env.COOPER_RELEASES_URL || 'https://github.com'
-  return NextResponse.redirect(repo)
+  return NextResponse.redirect(process.env.COOPER_RELEASES_URL || RELEASES)
 }
