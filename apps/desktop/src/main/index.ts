@@ -17,6 +17,10 @@ let isQuitting = false
 
 const isDev = !electron.app.isPackaged
 
+if (process.platform === 'win32') {
+  electron.app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion')
+}
+
 function panelUrl(page = 'index.html'): string {
   if (isDev && process.env['ELECTRON_RENDERER_URL']) {
     return `${process.env['ELECTRON_RENDERER_URL']}/${page}`
@@ -142,7 +146,7 @@ function broadcastState(): void {
 
 electron.app.whenReady().then(() => {
   try {
-    electron.nativeTheme.themeSource = 'light'
+    electron.nativeTheme.themeSource = data.getSettings().theme === 'dark' ? 'dark' : 'light'
     registerIpc(() => mainWindow)
 
     electron.ipcMain.handle('cooper:quit-app', () => {

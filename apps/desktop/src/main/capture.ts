@@ -1,5 +1,5 @@
 import * as electron from 'electron'
-import { readFileSync, existsSync } from 'fs'
+import { readFileSync, existsSync, statSync } from 'fs'
 import { extname as pathExtname } from 'path'
 import { uIOhook, UiohookKey } from 'uiohook-napi'
 import * as data from './store'
@@ -12,6 +12,11 @@ let lastRightShiftUp = 0
 let lastCaptureAt = 0
 let lastCapturedText = ''
 let isCapturing = false
+let injectingPaste = false
+let followupText = ''
+let followupUntil = 0
+let ctrlDown = false
+let metaDown = false
 const DOUBLE_MS = 380
 const CAPTURE_GUARD_MS = 1600
 
@@ -60,8 +65,27 @@ export function startCaptureListener(onCapture: CaptureHandler, onToggle: () => 
   }
 
   try {
+    uIOhook.on('keydown', (event) => {
+      if (event.keycode === UiohookKey.Ctrl || event.keycode === UiohookKey.CtrlRight) {
+        ctrlDown = true
+      }
+      if (event.keycode === UiohookKey.Meta || event.keycode === UiohookKey.MetaRight) {
+        metaDown = true
+      }
+      if (isCapturing || injectingPaste) return
+      const isV = event.keycode === UiohookKey.V
+      const pasteMod = process.platform === 'darwin' ? event.metaKey || metaDown : event.ctrlKey || ctrlDown
+      if (isV && pasteMod) scheduleFollowupTextPaste()
+    })
+
     uIOhook.on('keyup', (event) => {
-      if (isCapturing) return
+      if (event.keycode === UiohookKey.Ctrl || event.keycode === UiohookKey.CtrlRight) {
+        ctrlDown = false
+      }
+      if (event.keycode === UiohookKey.Meta || event.keycode === UiohookKey.MetaRight) {
+        metaDown = false
+      }
+      if (isCapturing || injectingPaste) return
       const now = Date.now()
       const isLeft = event.keycode === UiohookKey.Shift
       const isRight = event.keycode === UiohookKey.ShiftRight
@@ -164,6 +188,71 @@ function formatAsList(texts: string[]): string {
   return texts.map((t) => `- ${t.trim()}`).join('\n')
 }
 
+function armTextAfterNextPaste(text: string): void {
+  followupText = text
+  followupUntil = Date.now() + 25000
+}
+
+function scheduleFollowupTextPaste(): void {
+  if (injectingPaste || !followupText || Date.now() > followupUntil) return
+  // Only inject into other apps. Cursor/VS Code drop text when an image is pasted.
+  if (electron.BrowserWindow.getFocusedWindow()) return
+  const text = followupText
+  followupText = ''
+  injectingPaste = true
+  isCapturing = true
+  setTimeout(() => {
+    try {
+      electron.clipboard.writeText(text)
+      const mod = process.platform === 'darwin' ? UiohookKey.Meta : UiohookKey.Ctrl
+      uIOhook.keyTap(UiohookKey.V, [mod])
+    } catch (error) {
+      console.error('Failed to paste follow-up text:', error)
+    } finally {
+      setTimeout(() => {
+        injectingPaste = false
+        isCapturing = false
+      }, 250)
+    }
+  }, 320)
+}
+
+function writeSelectionClipboard(text: string, imagePaths: string[]): {
+  copiedText: boolean
+  copiedImages: number
+} {
+  const existingPaths = imagePaths.filter((p) => p && existsSync(p))
+  const images = existingPaths
+    .map((p) => electron.nativeImage.createFromPath(p))
+    .filter((img) => !img.isEmpty())
+
+  if (images.length === 0) {
+    electron.clipboard.writeText(text || '')
+    return { copiedText: Boolean(text), copiedImages: 0 }
+  }
+
+  const htmlImages = images
+    .map((img) => `<img src="data:image/png;base64,${img.toPNG().toString('base64')}" />`)
+    .join('')
+
+  if (text) {
+    // Chat apps treat image/* as the whole paste and skip text. Put the image on
+    // the clipboard, then insert the text on the next Ctrl+V.
+    electron.clipboard.write({
+      image: images[0],
+      html: `<html><body>${htmlImages}</body></html>`
+    })
+    armTextAfterNextPaste(text)
+    return { copiedText: true, copiedImages: images.length }
+  }
+
+  electron.clipboard.write({
+    image: images[0],
+    html: `<html><body>${htmlImages}</body></html>`
+  })
+  return { copiedText: false, copiedImages: images.length }
+}
+
 export function registerIpc(getMainWindow: () => electron.BrowserWindow | null): void {
   electron.ipcMain.handle('cooper:get-state', () => data.getState())
   electron.ipcMain.handle(
@@ -207,6 +296,10 @@ export function registerIpc(getMainWindow: () => electron.BrowserWindow | null):
         openAsHidden: true
       })
     }
+    if (partial.theme === 'dark' || partial.theme === 'light') {
+      electron.nativeTheme.themeSource = partial.theme
+    }
+    win?.webContents.send('cooper:state', data.getState())
     return settings
   })
   electron.ipcMain.handle('cooper:copy-text', (_e, text: string) => {
@@ -227,34 +320,7 @@ export function registerIpc(getMainWindow: () => electron.BrowserWindow | null):
       }
     ) => {
       const text = formatAsList(payload.texts.filter((t) => t.trim()))
-      const images = (payload.imagePaths || [])
-        .map((p) => electron.nativeImage.createFromPath(p))
-        .filter((img) => !img.isEmpty())
-
-      if (images.length === 0) {
-        electron.clipboard.writeText(text || '')
-        return { copiedText: Boolean(text), copiedImages: 0 }
-      }
-
-      if (images.length === 1) {
-        const payloadWrite: Electron.Data = { image: images[0] }
-        if (text) payloadWrite.text = text
-        electron.clipboard.write(payloadWrite)
-        return { copiedText: Boolean(text), copiedImages: 1 }
-      }
-
-      const htmlImages = images
-        .map((img) => {
-          const b64 = img.toPNG().toString('base64')
-          return `<p><img src="data:image/png;base64,${b64}" /></p>`
-        })
-        .join('')
-      electron.clipboard.write({
-        text: text || `${images.length} images`,
-        html: `<div>${htmlImages}${text ? `<pre>${text}</pre>` : ''}</div>`,
-        image: images[0]
-      })
-      return { copiedText: Boolean(text), copiedImages: images.length }
+      return writeSelectionClipboard(text, payload.imagePaths || [])
     }
   )
   electron.ipcMain.handle('cooper:pick-files', async () => {
@@ -270,7 +336,31 @@ export function registerIpc(getMainWindow: () => electron.BrowserWindow | null):
     return picked.filePaths.map((p) => data.importAttachment(p))
   })
   electron.ipcMain.handle('cooper:import-paths', (_e, paths: string[]) => {
-    return paths.map((p) => data.importAttachment(p))
+    const imported: CooperAttachment[] = []
+    for (const p of paths) {
+      try {
+        if (!p || !existsSync(p) || statSync(p).isDirectory()) continue
+        imported.push(data.importAttachment(p))
+      } catch (error) {
+        console.error('Failed to import dropped file:', p, error)
+      }
+    }
+    return imported
+  })
+  electron.ipcMain.on('cooper:start-drag', (event, payload: { files?: string[] }) => {
+    const files = (payload?.files ?? []).filter((p) => p && existsSync(p))
+    if (!files.length) return
+    let icon = trayIcon()
+    const preview = files.find((p) => /\.(png|jpe?g|gif|webp)$/i.test(p))
+    if (preview) {
+      const image = electron.nativeImage.createFromPath(preview)
+      if (!image.isEmpty()) icon = image.resize({ width: 48, height: 48 })
+    }
+    event.sender.startDrag({
+      file: files[0],
+      files,
+      icon
+    })
   })
   electron.ipcMain.handle(
     'cooper:save-buffer',

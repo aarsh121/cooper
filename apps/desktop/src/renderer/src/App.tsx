@@ -1,5 +1,22 @@
-import { ClipboardEvent, FormEvent, MouseEvent, useEffect, useMemo, useRef, useState } from 'react'
-import type { CooperAttachment, CooperItem, CooperState } from '../../../shared/types'
+import {
+  ClipboardEvent,
+  DragEvent,
+  FormEvent,
+  KeyboardEvent,
+  MouseEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState
+} from 'react'
+import {
+  parseSectionPrefix,
+  MAX_FONT_SIZE,
+  MIN_FONT_SIZE,
+  type CooperAttachment,
+  type CooperItem,
+  type CooperState
+} from '../../shared/types'
 
 const emptyState: CooperState = {
   items: [],
@@ -7,7 +24,10 @@ const emptyState: CooperState = {
     alwaysOnTop: true,
     launchAtLogin: true,
     showInTray: true,
-    opacity: 1
+    opacity: 1,
+    activeSection: '',
+    theme: 'light',
+    fontSize: 14
   }
 }
 
@@ -29,8 +49,15 @@ function itemCopyText(item: CooperItem): string {
   return files
 }
 
-function groupBySection(items: CooperItem[]): { section: string; items: CooperItem[] }[] {
+function groupBySection(
+  items: CooperItem[],
+  activeSection?: string
+): { section: string; items: CooperItem[] }[] {
   const map = new Map<string, CooperItem[]>()
+  const active = activeSection?.trim()
+  if (active && active.toLowerCase() !== 'inbox') {
+    map.set(active, [])
+  }
   for (const item of items) {
     const key = item.section?.trim() || 'Inbox'
     const list = map.get(key) ?? []
@@ -134,6 +161,7 @@ export default function App() {
   const [copiedFlash, setCopiedFlash] = useState(false)
   const [pasteHint, setPasteHint] = useState(false)
   const dragDepth = useRef(0)
+  const draggingOut = useRef(false)
   const resizing = useRef(false)
   const lastResize = useRef({ x: 0, y: 0 })
 
@@ -173,10 +201,19 @@ export default function App() {
     )
   }, [state.items, query])
 
-  const groups = useMemo(() => groupBySection(filtered), [filtered])
+  const groups = useMemo(
+    () => groupBySection(filtered, state.settings.activeSection),
+    [filtered, state.settings.activeSection]
+  )
 
   async function refresh(): Promise<void> {
     setState(await window.tars.getState())
+  }
+
+  function patchSettings(partial: Parameters<typeof window.tars.setSettings>[0]): void {
+    void window.tars.setSettings(partial).then((settings) => {
+      setState((prev) => ({ ...prev, settings }))
+    })
   }
 
   async function queueAttachments(files: CooperAttachment[]): Promise<void> {
@@ -231,9 +268,16 @@ export default function App() {
     }
   }
 
-  async function onSubmit(event: FormEvent): Promise<void> {
-    event.preventDefault()
+  async function onSubmit(event?: FormEvent): Promise<void> {
+    event?.preventDefault()
     const text = draft.trim()
+    const parsed = parseSectionPrefix(text)
+    if (text.startsWith('##') && parsed.section !== undefined && !parsed.text && pendingFiles.length === 0) {
+      await window.tars.setSettings({ activeSection: parsed.section })
+      setDraft('')
+      await refresh()
+      return
+    }
     if (!text && pendingFiles.length === 0) return
     await window.tars.addItem(text || 'Image', pendingFiles.length ? 'file' : 'note', {
       attachments: pendingFiles
@@ -241,6 +285,13 @@ export default function App() {
     setDraft('')
     setPendingFiles([])
     await refresh()
+  }
+
+  function onComposerKeyDown(event: KeyboardEvent<HTMLTextAreaElement>): void {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault()
+      void onSubmit()
+    }
   }
 
   function toggleSelected(id: string): void {
@@ -284,38 +335,131 @@ export default function App() {
     if (files.length) setPendingFiles((prev) => [...prev, ...files])
   }
 
-  async function onDropFiles(paths: string[]): Promise<void> {
-    if (!paths.length) return
-    const files = await window.tars.importPaths(paths)
-    setPendingFiles((prev) => [...prev, ...files])
+  async function onDropFiles(event: DragEvent): Promise<void> {
+    const dt = event.dataTransfer
+    if (!dt) return
+
+    const fromList = Array.from(dt.files)
+    const fromItems: File[] = []
+    if (dt.items?.length) {
+      for (const item of Array.from(dt.items)) {
+        if (item.kind !== 'file') continue
+        const file = item.getAsFile()
+        if (file) fromItems.push(file)
+      }
+    }
+    const files = fromList.length ? fromList : fromItems
+    if (files.length) {
+      const withPath: string[] = []
+      const blobs: File[] = []
+      for (const file of files) {
+        const filePath = window.tars.getPathForFile(file)
+        if (filePath) withPath.push(filePath)
+        else blobs.push(file)
+      }
+      if (withPath.length) {
+        await queueAttachments(await window.tars.importPaths(withPath))
+      }
+      if (blobs.length) {
+        const saved: CooperAttachment[] = []
+        for (const file of blobs) {
+          const buffer = await file.arrayBuffer()
+          saved.push(
+            await window.tars.saveBuffer({
+              bytes: buffer,
+              fileName: file.name || `drop-${Date.now()}`,
+              mime: file.type || undefined
+            })
+          )
+        }
+        await queueAttachments(saved)
+      }
+      return
+    }
+
+    const uriList = dt.getData('text/uri-list') || dt.getData('text')
+    const paths = uriList
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line && !line.startsWith('#') && /^(file:\/\/|[a-zA-Z]:[\\/]|\\\\)/.test(line))
+      .map((line) => {
+        try {
+          return decodeURIComponent(line.replace(/^file:\/\//, '').replace(/^\/([A-Za-z]:)/, '$1'))
+        } catch {
+          return ''
+        }
+      })
+      .filter(Boolean)
+    if (paths.length) {
+      await queueAttachments(await window.tars.importPaths(paths))
+    }
+  }
+
+  function onCardDragStart(event: DragEvent<HTMLElement>, item: CooperItem): void {
+    const bundle = selected.has(item.id)
+      ? state.items.filter((entry) => selected.has(entry.id))
+      : [item]
+    const texts = bundle.map(itemCopyText).filter(Boolean)
+    const text = texts.map((line) => `- ${line}`).join('\n')
+    const files = bundle.flatMap((entry) => entry.attachments.map((file) => file.path))
+
+    draggingOut.current = true
+    event.dataTransfer.effectAllowed = 'copy'
+    if (text) {
+      event.dataTransfer.setData('text/plain', text)
+      event.dataTransfer.setData('text', text)
+    }
+
+    if (files.length) {
+      event.preventDefault()
+      window.tars.startDrag({ files })
+    }
+  }
+
+  function onCardDragEnd(): void {
+    draggingOut.current = false
+  }
+
+  function isIncomingFileDrag(event: DragEvent): boolean {
+    if (draggingOut.current) return false
+    return Array.from(event.dataTransfer?.types ?? []).some(
+      (type) => type === 'Files' || type === 'text/uri-list'
+    )
   }
 
   return (
     <div
       className="app"
+      data-theme={state.settings.theme === 'dark' ? 'dark' : 'light'}
+      style={{
+        ['--text-scale' as string]: String((state.settings.fontSize || 14) / 14)
+      }}
       onPaste={(e) => void onPaste(e)}
       onDragEnter={(e) => {
         e.preventDefault()
+        if (!isIncomingFileDrag(e)) return
         dragDepth.current += 1
         setDragging(true)
       }}
       onDragLeave={(e) => {
         e.preventDefault()
+        if (!isIncomingFileDrag(e) && !dragging) return
         dragDepth.current -= 1
         if (dragDepth.current <= 0) {
           dragDepth.current = 0
           setDragging(false)
         }
       }}
-      onDragOver={(e) => e.preventDefault()}
+      onDragOver={(e) => {
+        e.preventDefault()
+        if (isIncomingFileDrag(e)) e.dataTransfer.dropEffect = 'copy'
+      }}
       onDrop={(e) => {
         e.preventDefault()
         dragDepth.current = 0
         setDragging(false)
-        const paths = Array.from(e.dataTransfer.files)
-          .map((f) => (f as File & { path?: string }).path)
-          .filter((p): p is string => Boolean(p))
-        void onDropFiles(paths)
+        if (draggingOut.current) return
+        void onDropFiles(e)
       }}
     >
       <div className="shell">
@@ -377,14 +521,52 @@ export default function App() {
           <div className="menu-pop">
             <button
               onClick={() => {
-                setMenuOpen(false)
-                void window.tars.setSettings({ alwaysOnTop: !state.settings.alwaysOnTop }).then(
-                  (settings) => setState((prev) => ({ ...prev, settings }))
-                )
+                patchSettings({ alwaysOnTop: !state.settings.alwaysOnTop })
               }}
             >
               {state.settings.alwaysOnTop ? 'Unpin window' : 'Always on top'}
             </button>
+            <div className="menu-label">Appearance</div>
+            <div className="menu-pills">
+              <button
+                type="button"
+                className={state.settings.theme !== 'dark' ? 'on' : ''}
+                onClick={() => patchSettings({ theme: 'light' })}
+              >
+                Light
+              </button>
+              <button
+                type="button"
+                className={state.settings.theme === 'dark' ? 'on' : ''}
+                onClick={() => patchSettings({ theme: 'dark' })}
+              >
+                Dark
+              </button>
+            </div>
+            <div className="menu-label">Text size</div>
+            <div className="menu-stepper">
+              <button
+                type="button"
+                aria-label="Decrease text size"
+                disabled={(state.settings.fontSize || 14) <= MIN_FONT_SIZE}
+                onClick={() =>
+                  patchSettings({ fontSize: (state.settings.fontSize || 14) - 1 })
+                }
+              >
+                A−
+              </button>
+              <span>{state.settings.fontSize || 14}</span>
+              <button
+                type="button"
+                aria-label="Increase text size"
+                disabled={(state.settings.fontSize || 14) >= MAX_FONT_SIZE}
+                onClick={() =>
+                  patchSettings({ fontSize: (state.settings.fontSize || 14) + 1 })
+                }
+              >
+                A+
+              </button>
+            </div>
             <button
               onClick={() => {
                 setMenuOpen(false)
@@ -426,7 +608,7 @@ export default function App() {
             <div className="empty">
               Select text anywhere and tap Shift twice.
               <br />
-              Or paste an image / add a prompt below.
+              Type ##Work to make a section, or drop a file below.
             </div>
           ) : (
             groups.map((group) => (
@@ -435,11 +617,17 @@ export default function App() {
                   <span>{group.section}</span>
                 </div>
                 <div className="cards">
-                  {group.items.map((item) => (
+                  {group.items.length === 0 ? (
+                    <div className="section-empty">Notes in this section land here</div>
+                  ) : (
+                    group.items.map((item) => (
                     <article
                       key={item.id}
                       className={`card${selected.has(item.id) ? ' selected' : ''}${item.done ? ' done' : ''}`}
+                      draggable
                       onClick={() => toggleSelected(item.id)}
+                      onDragStart={(e) => onCardDragStart(e, item)}
+                      onDragEnd={onCardDragEnd}
                     >
                       <button
                         className={`circle${item.done ? ' on' : ''}`}
@@ -461,7 +649,8 @@ export default function App() {
                         ) : null}
                       </div>
                     </article>
-                  ))}
+                    ))
+                  )}
                 </div>
               </section>
             ))
@@ -470,7 +659,10 @@ export default function App() {
 
         {selected.size > 0 ? (
           <div className="selection-bar">
-            <span>{selected.size} selected</span>
+            <span>
+              {selected.size} selected
+              <em className="selection-hint">Copy or drag into chat</em>
+            </span>
             <button className="primary" onClick={() => void copySelectedAsList()}>
               {copiedFlash ? 'Copied' : 'Copy for chat'}
             </button>
@@ -491,12 +683,34 @@ export default function App() {
               ))}
             </div>
           ) : null}
+          {state.settings.activeSection ? (
+            <div className="active-section">
+              <span>
+                Adding to <strong>{state.settings.activeSection}</strong>
+              </span>
+              <button
+                type="button"
+                title="Back to Inbox"
+                onClick={() => void window.tars.setSettings({ activeSection: '' }).then(refresh)}
+              >
+                ×
+              </button>
+            </div>
+          ) : null}
           <form className="composer" onSubmit={(e) => void onSubmit(e)}>
             <span className="circle" aria-hidden />
-            <input
+            <textarea
               value={draft}
+              rows={1}
               onChange={(e) => setDraft(e.target.value)}
-              placeholder={pasteHint ? 'Image pasted — add note & send' : 'Add a note or a prompt'}
+              onKeyDown={onComposerKeyDown}
+              placeholder={
+                pasteHint
+                  ? 'Image pasted — add note & send'
+                  : state.settings.activeSection
+                    ? `Add to ${state.settings.activeSection}  ·  ##Name for a new section`
+                    : 'Add a note  ·  ##Work to create a section'
+              }
             />
             <div className="composer-actions">
               <button

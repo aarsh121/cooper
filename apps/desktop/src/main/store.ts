@@ -10,6 +10,8 @@ import {
   CooperState,
   DEFAULT_SETTINGS,
   ItemKind,
+  MAX_FONT_SIZE,
+  MIN_FONT_SIZE,
   parseSectionPrefix
 } from '../shared/types'
 
@@ -47,6 +49,11 @@ export function getSettings(): CooperSettings {
 
 export function setSettings(partial: Partial<CooperSettings>): CooperSettings {
   const next = { ...getSettings(), ...partial }
+  if (next.theme !== 'dark') next.theme = 'light'
+  next.fontSize = Math.min(
+    MAX_FONT_SIZE,
+    Math.max(MIN_FONT_SIZE, Math.round(Number(next.fontSize) || DEFAULT_SETTINGS.fontSize))
+  )
   store.set('settings', next)
   return next
 }
@@ -124,12 +131,16 @@ export function addItem(
   options?: { section?: string; attachments?: CooperAttachment[] }
 ): CooperItem {
   const parsed = parseSectionPrefix(text)
+  let section = getSettings().activeSection || ''
+  if (options?.section !== undefined) section = options.section
+  else if (parsed.section !== undefined) section = parsed.section
+  if (parsed.section !== undefined) setSettings({ activeSection: parsed.section })
   const now = Date.now()
   const item: CooperItem = {
     id: randomUUID(),
     kind,
     text: parsed.text,
-    section: options?.section ?? parsed.section,
+    section,
     done: false,
     attachments: options?.attachments ?? [],
     createdAt: now,
@@ -149,7 +160,7 @@ export function addCaptureDeduped(text: string, kind: ItemKind = 'capture'): Coo
   if (recent && recent.text === trimmed && Date.now() - recent.createdAt < 4000) {
     return null
   }
-  return addItem(trimmed, kind)
+  return addItem(trimmed, kind, { section: '' })
 }
 
 export function updateItem(

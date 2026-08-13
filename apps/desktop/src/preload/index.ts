@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import type {
   CooperAttachment,
   CooperItem,
@@ -34,6 +34,16 @@ const api = {
   pickFiles: (): Promise<CooperAttachment[]> => ipcRenderer.invoke('cooper:pick-files'),
   importPaths: (paths: string[]): Promise<CooperAttachment[]> =>
     ipcRenderer.invoke('cooper:import-paths', paths),
+  getPathForFile: (file: File): string => {
+    try {
+      return webUtils.getPathForFile(file) || ''
+    } catch {
+      return ''
+    }
+  },
+  startDrag: (payload: { files: string[] }): void => {
+    ipcRenderer.send('cooper:start-drag', payload)
+  },
   saveBuffer: (payload: {
     bytes: ArrayBuffer
     fileName: string
