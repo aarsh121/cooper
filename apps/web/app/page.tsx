@@ -1,10 +1,8 @@
 import { InteractiveDemo } from './interactive-demo'
 
 const RELEASES = 'https://github.com/aarsh121/cooper/releases'
-const WIN_INSTALLER =
-  'https://github.com/aarsh121/cooper/releases/latest/download/TARS-Setup-1.0.1.exe'
-const MAC_INSTALLER =
-  'https://github.com/aarsh121/cooper/releases/latest/download/TARS-1.0.1-mac.dmg'
+const WIN_INSTALLER = '/api/download?platform=win'
+const MAC_INSTALLER = '/api/download?platform=mac'
 
 export default function HomePage() {
   return (
