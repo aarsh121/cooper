@@ -1,7 +1,7 @@
 {
   "name": "cooper",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A sticky widget for AI-assisted work — capture, checklist, and scratchpad.",
   "workspaces": [
     "apps/*"

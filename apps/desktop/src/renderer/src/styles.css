@@ -280,9 +280,13 @@ textarea {
 
 .list {
   flex: 1;
-  overflow: auto;
-  padding: 4px 14px 132px;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px 14px 10px;
   -webkit-app-region: no-drag;
+  -webkit-overflow-scrolling: touch;
 }
 
 .section {
@@ -337,12 +341,12 @@ textarea {
   gap: 12px;
   align-items: start;
   background: var(--card);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   border-radius: var(--radius-card);
-  padding: 14px 14px 14px 12px;
+  padding: 10px 14px 10px 12px;
   box-shadow: var(--shadow);
   border: 1.5px solid var(--card-border);
+  scroll-margin-bottom: 8px;
+  contain: content;
   transition: border-color 120ms ease-out, transform 100ms ease-out;
   cursor: grab;
   user-select: none;
@@ -491,11 +495,16 @@ textarea {
   line-height: 1.5;
 }
 
+.dock {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 14px 14px;
+  -webkit-app-region: no-drag;
+}
+
 .composer-wrap {
-  position: absolute;
-  left: 14px;
-  right: 14px;
-  bottom: 14px;
   -webkit-app-region: no-drag;
 }
 
@@ -594,10 +603,6 @@ textarea {
 }
 
 .selection-bar {
-  position: absolute;
-  left: 14px;
-  right: 14px;
-  bottom: 118px;
   display: flex;
   gap: 8px;
   padding: 8px;
@@ -605,12 +610,12 @@ textarea {
   background: rgba(23, 23, 23, 0.88);
   color: #fff;
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
-  -webkit-app-region: no-drag;
   animation: rise 140ms ease-out;
 }
 
 .selection-bar span {
   flex: 1;
+  min-width: 0;
   font-size: var(--fs-sm);
   align-self: center;
   padding-left: 6px;
@@ -628,6 +633,7 @@ textarea {
 }
 
 .selection-bar button {
+  flex: 0 0 auto;
   border: 0;
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.12);
@@ -635,6 +641,7 @@ textarea {
   padding: 8px 10px;
   font-size: var(--fs-sm);
   font-weight: 600;
+  white-space: nowrap;
   cursor: pointer;
   transition: background 120ms ease-out, transform 100ms ease-out;
 }
@@ -649,12 +656,12 @@ textarea {
 
 .selection-bar button.primary {
   background: #fff;
-  color: var(--on-ink);
+  color: #171717;
 }
 
 .app[data-theme='dark'] .selection-bar button.primary {
   background: #f3f3f3;
-  color: #111;
+  color: #171717;
 }
 
 .drop-overlay {

@@ -2,9 +2,9 @@ import { InteractiveDemo } from './interactive-demo'
 
 const RELEASES = 'https://github.com/aarsh121/cooper/releases'
 const WIN_INSTALLER =
-  'https://github.com/aarsh121/cooper/releases/latest/download/TARS-Setup-1.0.0.exe'
+  'https://github.com/aarsh121/cooper/releases/latest/download/TARS-Setup-1.0.1.exe'
 const MAC_INSTALLER =
-  'https://github.com/aarsh121/cooper/releases/latest/download/TARS-1.0.0-mac.dmg'
+  'https://github.com/aarsh121/cooper/releases/latest/download/TARS-1.0.1-mac.dmg'
 
 export default function HomePage() {
   return (
@@ -55,6 +55,10 @@ export default function HomePage() {
         <article>
           <h2>Route</h2>
           <p>Select a few items, copy for chat, paste into your agent. Check them off.</p>
+        </article>
+        <article>
+          <h2>Look</h2>
+          <p>Light or dark from the menu. A− / A+ resizes text so the pad stays readable.</p>
         </article>
       </section>
 

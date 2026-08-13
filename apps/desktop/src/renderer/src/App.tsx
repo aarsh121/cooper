@@ -164,6 +164,7 @@ export default function App() {
   const draggingOut = useRef(false)
   const resizing = useRef(false)
   const lastResize = useRef({ x: 0, y: 0 })
+  const listRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     void window.tars.getState().then(setState)
@@ -205,6 +206,19 @@ export default function App() {
     () => groupBySection(filtered, state.settings.activeSection),
     [filtered, state.settings.activeSection]
   )
+
+  useEffect(() => {
+    if (selected.size === 0) return
+    const list = listRef.current
+    if (!list) return
+    const lastId = [...selected][selected.size - 1]
+    const card = list.querySelector<HTMLElement>(`[data-item-id="${CSS.escape(lastId)}"]`)
+    if (!card) return
+    const listRect = list.getBoundingClientRect()
+    const cardRect = card.getBoundingClientRect()
+    if (cardRect.bottom <= listRect.bottom && cardRect.top >= listRect.top) return
+    card.scrollIntoView({ block: 'nearest', behavior: 'auto' })
+  }, [selected])
 
   async function refresh(): Promise<void> {
     setState(await window.tars.getState())
@@ -603,7 +617,7 @@ export default function App() {
           </div>
         ) : null}
 
-        <div className="list" onClick={() => setMenuOpen(false)}>
+        <div className="list" ref={listRef} onClick={() => setMenuOpen(false)}>
           {groups.length === 0 ? (
             <div className="empty">
               Select text anywhere and tap Shift twice.
@@ -623,6 +637,7 @@ export default function App() {
                     group.items.map((item) => (
                     <article
                       key={item.id}
+                      data-item-id={item.id}
                       className={`card${selected.has(item.id) ? ' selected' : ''}${item.done ? ' done' : ''}`}
                       draggable
                       onClick={() => toggleSelected(item.id)}
@@ -657,83 +672,85 @@ export default function App() {
           )}
         </div>
 
-        {selected.size > 0 ? (
-          <div className="selection-bar">
-            <span>
-              {selected.size} selected
-              <em className="selection-hint">Copy or drag into chat</em>
-            </span>
-            <button className="primary" onClick={() => void copySelectedAsList()}>
-              {copiedFlash ? 'Copied' : 'Copy for chat'}
-            </button>
-            <button onClick={() => void deleteSelected()}>Delete</button>
-            <button onClick={() => setSelected(new Set())}>Clear</button>
-          </div>
-        ) : null}
-
-        <div className="composer-wrap">
-          {pendingFiles.length > 0 ? (
-            <div className="pending-files">
-              {pendingFiles.map((file) => (
-                <AttachmentPreview
-                  key={file.id}
-                  file={file}
-                  onRemove={() => setPendingFiles((prev) => prev.filter((f) => f.id !== file.id))}
-                />
-              ))}
-            </div>
-          ) : null}
-          {state.settings.activeSection ? (
-            <div className="active-section">
+        <div className="dock">
+          {selected.size > 0 ? (
+            <div className="selection-bar">
               <span>
-                Adding to <strong>{state.settings.activeSection}</strong>
+                {selected.size} selected
+                <em className="selection-hint">Copy or drag into chat</em>
               </span>
-              <button
-                type="button"
-                title="Back to Inbox"
-                onClick={() => void window.tars.setSettings({ activeSection: '' }).then(refresh)}
-              >
-                ×
+              <button className="primary" onClick={() => void copySelectedAsList()}>
+                {copiedFlash ? 'Copied' : 'Copy for chat'}
               </button>
+              <button onClick={() => void deleteSelected()}>Delete</button>
+              <button onClick={() => setSelected(new Set())}>Clear</button>
             </div>
           ) : null}
-          <form className="composer" onSubmit={(e) => void onSubmit(e)}>
-            <span className="circle" aria-hidden />
-            <textarea
-              value={draft}
-              rows={1}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={onComposerKeyDown}
-              placeholder={
-                pasteHint
-                  ? 'Image pasted — add note & send'
-                  : state.settings.activeSection
-                    ? `Add to ${state.settings.activeSection}  ·  ##Name for a new section`
-                    : 'Add a note  ·  ##Work to create a section'
-              }
-            />
-            <div className="composer-actions">
-              <button
-                type="button"
-                className="icon-quiet"
-                title="Paste image from clipboard"
-                onClick={() => void pasteFromNativeClipboard()}
-              >
-                ⎘
-              </button>
-              <button
-                type="button"
-                className="icon-quiet"
-                title="Attach files"
-                onClick={() => void attachFiles()}
-              >
-                📎
-              </button>
-              <button type="submit" className="icon-quiet" title="Add">
-                ↑
-              </button>
-            </div>
-          </form>
+
+          <div className="composer-wrap">
+            {pendingFiles.length > 0 ? (
+              <div className="pending-files">
+                {pendingFiles.map((file) => (
+                  <AttachmentPreview
+                    key={file.id}
+                    file={file}
+                    onRemove={() => setPendingFiles((prev) => prev.filter((f) => f.id !== file.id))}
+                  />
+                ))}
+              </div>
+            ) : null}
+            {state.settings.activeSection ? (
+              <div className="active-section">
+                <span>
+                  Adding to <strong>{state.settings.activeSection}</strong>
+                </span>
+                <button
+                  type="button"
+                  title="Back to Inbox"
+                  onClick={() => void window.tars.setSettings({ activeSection: '' }).then(refresh)}
+                >
+                  ×
+                </button>
+              </div>
+            ) : null}
+            <form className="composer" onSubmit={(e) => void onSubmit(e)}>
+              <span className="circle" aria-hidden />
+              <textarea
+                value={draft}
+                rows={1}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={onComposerKeyDown}
+                placeholder={
+                  pasteHint
+                    ? 'Image pasted — add note & send'
+                    : state.settings.activeSection
+                      ? `Add to ${state.settings.activeSection}  ·  ##Name for a new section`
+                      : 'Add a note  ·  ##Work to create a section'
+                }
+              />
+              <div className="composer-actions">
+                <button
+                  type="button"
+                  className="icon-quiet"
+                  title="Paste image from clipboard"
+                  onClick={() => void pasteFromNativeClipboard()}
+                >
+                  ⎘
+                </button>
+                <button
+                  type="button"
+                  className="icon-quiet"
+                  title="Attach files"
+                  onClick={() => void attachFiles()}
+                >
+                  📎
+                </button>
+                <button type="submit" className="icon-quiet" title="Add">
+                  ↑
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
 
         {dragging ? <div className="drop-overlay">Drop files to attach</div> : null}

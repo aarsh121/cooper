@@ -19,6 +19,7 @@ const isDev = !electron.app.isPackaged
 
 if (process.platform === 'win32') {
   electron.app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion')
+  electron.app.commandLine.appendSwitch('enable-smooth-scrolling')
 }
 
 function panelUrl(page = 'index.html'): string {
@@ -60,7 +61,8 @@ function createMainWindow(): electron.BrowserWindow {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false
+      sandbox: false,
+      backgroundThrottling: false
     }
   })
 

@@ -21,6 +21,8 @@ Select something worth keeping anywhere on your machine, tap **Shift twice**, an
 - Fallback shortcuts: `Ctrl/⌘⇧C` capture, `Ctrl/⌘⇧Space` toggle
 - Paste images from clipboard
 - Multi-select → copy for chat (text + real images)
+- Light and dark themes
+- Text size A− / A+ in settings
 - Local JSON storage only
 
 ## Quick start
@@ -34,7 +36,7 @@ npm run dev:web       # landing page at http://localhost:3000
 ### Build installers
 
 ```bash
-# Windows NSIS installer → apps/desktop/release/TARS-Setup-1.0.0.exe
+# Windows NSIS installer → apps/desktop/release/TARS-Setup-1.0.1.exe
 npm run pack:win
 
 # macOS DMG (run on macOS or via GitHub Actions on tag push)
