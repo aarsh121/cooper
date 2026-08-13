@@ -1,4 +1,5 @@
 import { InteractiveDemo } from './interactive-demo'
+import { SnipPreview } from './snip-preview'
 
 const RELEASES = 'https://github.com/aarsh121/cooper/releases'
 const WIN_INSTALLER = '/api/download?platform=win'
@@ -42,12 +43,29 @@ export default function HomePage() {
         </p>
       </section>
 
+      <section className="snip-feature" id="snip">
+        <div className="snip-intro">
+          <p className="eyebrow">Ctrl / ⌘ ⇧ X</p>
+          <h2>Snip and draw</h2>
+          <p>
+            Drag a region of any screen. Mark it up with arrows, boxes, ovals, pen,
+            or highlighter. Enter saves it to the pad — markup and all — ready to
+            paste into chat.
+          </p>
+          <p className="snip-alt">
+            Or tap the crop button on the pad. Esc retakes. Undo with{' '}
+            <kbd>Ctrl</kbd> / <kbd>⌘</kbd> <kbd>Z</kbd>.
+          </p>
+        </div>
+        <SnipPreview />
+      </section>
+
       <section className="points">
         <article>
           <h2>Capture</h2>
           <p>
-            Select anywhere. Tap Shift twice. Or snip the screen, add arrows and
-            boxes, and drop it into the pad.
+            Select anywhere. Tap Shift twice. Or hit Ctrl / ⌘ ⇧ X to snip the
+            screen, mark it up, and drop it into the pad.
           </p>
         </article>
         <article>
