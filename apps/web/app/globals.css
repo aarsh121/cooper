@@ -503,7 +503,7 @@ input {
 
 .points {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 18px;
   padding: 72px 0 24px;
   border-top: 1px solid var(--line);
@@ -520,6 +520,29 @@ input {
   margin: 0;
   color: var(--muted);
   line-height: 1.5;
+}
+
+.comfort {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px 32px;
+  padding: 48px 0 24px;
+  border-top: 1px solid var(--line);
+}
+
+.comfort h2 {
+  margin: 0 0 8px;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: clamp(1.6rem, 3vw, 2rem);
+  font-weight: 500;
+  letter-spacing: -0.03em;
+}
+
+.comfort p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+  max-width: 28rem;
 }
 
 .trust,
@@ -640,12 +663,10 @@ input {
 }
 
 @media (max-width: 860px) {
-  .demo-stage {
+  .demo-stage,
+  .points,
+  .comfort {
     grid-template-columns: 1fr;
-  }
-
-  .points {
-    grid-template-columns: 1fr 1fr;
   }
 
   .demo-chat {
@@ -655,12 +676,6 @@ input {
 
   .hero {
     padding-top: 36px;
-  }
-}
-
-@media (max-width: 560px) {
-  .points {
-    grid-template-columns: 1fr;
   }
 }
 

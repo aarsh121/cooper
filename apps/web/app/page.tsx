@@ -56,9 +56,16 @@ export default function HomePage() {
           <h2>Route</h2>
           <p>Select a few items, copy for chat, paste into your agent. Check them off.</p>
         </article>
+      </section>
+
+      <section className="comfort">
         <article>
-          <h2>Look</h2>
-          <p>Light or dark from the menu. A− / A+ resizes text so the pad stays readable.</p>
+          <h2>Light and dark</h2>
+          <p>Open the menu and pick Light or Dark. The pad matches the room you&apos;re working in.</p>
+        </article>
+        <article>
+          <h2>Text size</h2>
+          <p>Tap A− or A+ in settings until notes sit comfortably beside your chat.</p>
         </article>
       </section>
 
