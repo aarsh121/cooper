@@ -18,6 +18,7 @@ Select something worth keeping anywhere on your machine, tap **Shift twice**, an
 - Always-on-top floating sticky panel
 - Double **Left Shift** → capture current text selection
 - Double **Right Shift** → show / hide panel
+- **Ctrl/⌘⇧X** → snip the screen, mark up with arrows / boxes, save to the pad
 - Fallback shortcuts: `Ctrl/⌘⇧C` capture, `Ctrl/⌘⇧Space` toggle
 - Paste images from clipboard
 - Multi-select → copy for chat (text + real images)
@@ -55,7 +56,7 @@ TARS is not notarized yet. After installing, clear quarantine flags:
 xattr -cr /Applications/TARS.app
 ```
 
-Then grant **Accessibility** access when prompted.
+Then grant **Accessibility** access when prompted (Shift-twice capture), and **Screen Recording** to snip the screen.
 
 ## Deploy the site to Vercel
 

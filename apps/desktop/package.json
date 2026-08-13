@@ -80,7 +80,8 @@
       "entitlementsInherit": "build/entitlements.mac.plist",
       "extendInfo": {
         "NSAppleEventsUsageDescription": "TARS needs Accessibility access to capture selected text and listen for shortcuts.",
-        "NSAccessibilityUsageDescription": "TARS needs Accessibility access to read your text selection and listen for its shortcuts."
+        "NSAccessibilityUsageDescription": "TARS needs Accessibility access to read your text selection and listen for its shortcuts.",
+        "NSScreenCaptureUsageDescription": "TARS needs Screen Recording permission to snip your screen and mark it up."
       },
       "artifactName": "TARS-${version}-mac.${ext}"
     },

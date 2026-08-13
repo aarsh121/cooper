@@ -4,7 +4,8 @@ import type {
   CooperItem,
   CooperSettings,
   CooperState,
-  ItemKind
+  ItemKind,
+  SnipInitPayload
 } from '../shared/types'
 
 const api = {
@@ -56,6 +57,19 @@ const api = {
     ipcRenderer.invoke('cooper:read-attachment-data-url', filePath),
   openDataFile: (): Promise<string> => ipcRenderer.invoke('cooper:open-data-file'),
   hideWindow: (): Promise<void> => ipcRenderer.invoke('cooper:hide-window'),
+  startSnip: (): Promise<boolean> => ipcRenderer.invoke('cooper:start-snip'),
+  cancelSnip: (): Promise<boolean> => ipcRenderer.invoke('cooper:cancel-snip'),
+  snipReady: (): Promise<boolean> => ipcRenderer.invoke('cooper:snip-ready'),
+  getSnipPayload: (): Promise<SnipInitPayload | null> => ipcRenderer.invoke('cooper:snip-payload'),
+  completeSnip: (payload: { bytes: ArrayBuffer; fileName?: string }): Promise<CooperItem | null> =>
+    ipcRenderer.invoke('cooper:complete-snip', payload),
+  onSnipInit: (callback: (payload: SnipInitPayload) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, payload: SnipInitPayload): void => {
+      callback(payload)
+    }
+    ipcRenderer.on('cooper:snip-init', listener)
+    return () => ipcRenderer.removeListener('cooper:snip-init', listener)
+  },
   quitApp: (): Promise<void> => ipcRenderer.invoke('cooper:quit-app'),
   resizeBy: (delta: { dx: number; dy: number }): Promise<boolean> =>
     ipcRenderer.invoke('cooper:resize-by', delta),

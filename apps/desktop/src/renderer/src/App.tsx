@@ -265,11 +265,6 @@ export default function App() {
     return false
   }
 
-  async function pasteFromNativeClipboard(): Promise<void> {
-    const files = await window.tars.pasteClipboard()
-    await queueAttachments(files)
-  }
-
   async function onPaste(event: ClipboardEvent): Promise<void> {
     const handled = await pasteFromEvent(event)
     if (handled) return
@@ -622,7 +617,7 @@ export default function App() {
             <div className="empty">
               Select text anywhere and tap Shift twice.
               <br />
-              Type ##Work to make a section, or drop a file below.
+              Snip the screen to mark it up, or drop a file below.
             </div>
           ) : (
             groups.map((group) => (
@@ -714,7 +709,17 @@ export default function App() {
               </div>
             ) : null}
             <form className="composer" onSubmit={(e) => void onSubmit(e)}>
-              <span className="circle" aria-hidden />
+              <button type="submit" className="circle add" aria-label="Add note" title="Add">
+                <svg viewBox="0 0 24 24" width="12" height="12" aria-hidden>
+                  <path
+                    d="M12 5v14M5 12h14"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.6"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </button>
               <textarea
                 value={draft}
                 rows={1}
@@ -732,10 +737,20 @@ export default function App() {
                 <button
                   type="button"
                   className="icon-quiet"
-                  title="Paste image from clipboard"
-                  onClick={() => void pasteFromNativeClipboard()}
+                  title="Snip screen (Ctrl/⌘⇧X)"
+                  aria-label="Snip screen"
+                  onClick={() => void window.tars.startSnip()}
                 >
-                  ⎘
+                  <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden>
+                    <path
+                      d="M6 3v13a2 2 0 0 0 2 2h13M18 21V8a2 2 0 0 0-2-2H3"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
                 </button>
                 <button
                   type="button"
@@ -744,9 +759,6 @@ export default function App() {
                   onClick={() => void attachFiles()}
                 >
                   📎
-                </button>
-                <button type="submit" className="icon-quiet" title="Add">
-                  ↑
                 </button>
               </div>
             </form>

@@ -21,8 +21,9 @@ export default function HomePage() {
         <p className="eyebrow">Free · local sticky widget</p>
         <h1>TARS</h1>
         <p className="lede">
-          Queue prompts as they appear. Capture with Shift twice. Paste images. Copy a list
-          back into ChatGPT, Claude, or Cursor when you&apos;re ready.
+          Queue prompts as they appear. Capture with Shift twice. Snip the screen
+          and mark it up. Copy a list back into ChatGPT, Claude, or Cursor when
+          you&apos;re ready.
         </p>
         <div className="actions">
           <a className="btn primary" href="#download">
@@ -44,7 +45,10 @@ export default function HomePage() {
       <section className="points">
         <article>
           <h2>Capture</h2>
-          <p>Select anywhere. Tap Shift twice. TARS keeps it without breaking your flow.</p>
+          <p>
+            Select anywhere. Tap Shift twice. Or snip the screen, add arrows and
+            boxes, and drop it into the pad.
+          </p>
         </article>
         <article>
           <h2>Backlog</h2>
@@ -103,7 +107,7 @@ export default function HomePage() {
           </pre>
           <p>
             Then open TARS, and grant <strong>Accessibility</strong> when asked (needed for
-            Shift-twice capture).
+            Shift-twice capture). Grant <strong>Screen Recording</strong> to snip the screen.
           </p>
         </div>
       </section>

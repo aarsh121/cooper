@@ -13,12 +13,17 @@ let lastCaptureAt = 0
 let lastCapturedText = ''
 let isCapturing = false
 let injectingPaste = false
+let inputLocked = false
 let followupText = ''
 let followupUntil = 0
 let ctrlDown = false
 let metaDown = false
 const DOUBLE_MS = 380
 const CAPTURE_GUARD_MS = 1600
+
+export function setCaptureLocked(locked: boolean): void {
+  inputLocked = locked
+}
 
 function isDouble(prev: number, now: number): boolean {
   return prev > 0 && now - prev > 50 && now - prev < DOUBLE_MS
@@ -72,7 +77,7 @@ export function startCaptureListener(onCapture: CaptureHandler, onToggle: () => 
       if (event.keycode === UiohookKey.Meta || event.keycode === UiohookKey.MetaRight) {
         metaDown = true
       }
-      if (isCapturing || injectingPaste) return
+      if (isCapturing || injectingPaste || inputLocked) return
       const isV = event.keycode === UiohookKey.V
       const pasteMod = process.platform === 'darwin' ? event.metaKey || metaDown : event.ctrlKey || ctrlDown
       if (isV && pasteMod) scheduleFollowupTextPaste()
@@ -85,7 +90,7 @@ export function startCaptureListener(onCapture: CaptureHandler, onToggle: () => 
       if (event.keycode === UiohookKey.Meta || event.keycode === UiohookKey.MetaRight) {
         metaDown = false
       }
-      if (isCapturing || injectingPaste) return
+      if (isCapturing || injectingPaste || inputLocked) return
       const now = Date.now()
       const isLeft = event.keycode === UiohookKey.Shift
       const isRight = event.keycode === UiohookKey.ShiftRight

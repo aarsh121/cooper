@@ -35,7 +35,8 @@ export default defineConfig({
       rollupOptions: {
         input: {
           index: resolve(__dirname, 'src/renderer/index.html'),
-          hud: resolve(__dirname, 'src/renderer/hud.html')
+          hud: resolve(__dirname, 'src/renderer/hud.html'),
+          snip: resolve(__dirname, 'src/renderer/snip.html')
         }
       }
     }

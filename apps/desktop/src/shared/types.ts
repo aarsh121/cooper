@@ -36,6 +36,12 @@ export interface CooperState {
   settings: CooperSettings
 }
 
+export interface SnipInitPayload {
+  png: Uint8Array
+  width: number
+  height: number
+}
+
 export const DEFAULT_SETTINGS: CooperSettings = {
   alwaysOnTop: true,
   launchAtLogin: true,

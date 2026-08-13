@@ -8,6 +8,7 @@ import {
   stopCaptureListener,
   trayIcon
 } from './capture'
+import { registerSnip, startSnip, stopSnip } from './snip'
 import * as data from './store'
 
 let mainWindow: electron.BrowserWindow | null = null
@@ -116,6 +117,12 @@ function createTray(): void {
         }
       },
       {
+        label: 'Snip screen',
+        click: () => {
+          void startSnip()
+        }
+      },
+      {
         label: 'Minimize TARS',
         click: () => mainWindow?.hide()
       },
@@ -150,9 +157,17 @@ electron.app.whenReady().then(() => {
   try {
     electron.nativeTheme.themeSource = data.getSettings().theme === 'dark' ? 'dark' : 'light'
     registerIpc(() => mainWindow)
+    registerSnip({
+      getMainWindow: () => mainWindow,
+      panelUrl,
+      preloadPath: join(__dirname, '../preload/index.js'),
+      showHud: (message) => showHud(hudWindow, message, panelUrl('hud.html')),
+      broadcastState
+    })
 
     electron.ipcMain.handle('cooper:quit-app', () => {
       isQuitting = true
+      stopSnip()
       stopCaptureListener()
       electron.app.quit()
     })
@@ -213,6 +228,7 @@ electron.app.whenReady().then(() => {
 
 electron.app.on('before-quit', () => {
   isQuitting = true
+  stopSnip()
   stopCaptureListener()
 })
 
@@ -221,5 +237,6 @@ electron.app.on('window-all-closed', () => {
 })
 
 electron.app.on('will-quit', () => {
+  stopSnip()
   stopCaptureListener()
 })

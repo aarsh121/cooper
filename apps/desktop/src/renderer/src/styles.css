@@ -522,7 +522,19 @@ textarea {
 }
 
 .composer .circle {
-  margin-top: 8px;
+  margin-top: 6px;
+}
+
+.composer .circle.add {
+  width: 22px;
+  height: 22px;
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--on-ink);
+}
+
+.composer .circle.add:hover {
+  filter: brightness(1.08);
 }
 
 .composer textarea {
@@ -587,12 +599,20 @@ textarea {
   cursor: pointer;
   display: grid;
   place-items: center;
-  transition: background 120ms ease-out, color 120ms ease-out;
+  transition: background 120ms ease-out, color 120ms ease-out, transform 100ms ease-out;
+}
+
+.icon-quiet svg {
+  display: block;
 }
 
 .icon-quiet:hover {
   background: var(--chip-bg);
   color: var(--text);
+}
+
+.icon-quiet:active {
+  transform: scale(0.96);
 }
 
 .pending-files {
