@@ -37,7 +37,7 @@ npm run dev:web       # landing page at http://localhost:3000
 ### Build installers
 
 ```bash
-# Windows NSIS installer → apps/desktop/release/TARS-Setup-1.0.1.exe
+# Windows NSIS installer → apps/desktop/release/TARS-Setup-1.0.2.exe
 npm run pack:win
 
 # macOS DMG (run on macOS or via GitHub Actions on tag push)

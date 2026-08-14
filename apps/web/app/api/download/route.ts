@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 
 const REPO = 'aarsh121/cooper'
 const RELEASES = `https://github.com/${REPO}/releases/latest`
-const FALLBACK_WIN = `https://github.com/${REPO}/releases/download/v1.0.1/TARS-Setup-1.0.1.exe`
-const FALLBACK_MAC = `https://github.com/${REPO}/releases/download/v1.0.1/TARS-1.0.1-mac.dmg`
+const FALLBACK_WIN = `https://github.com/${REPO}/releases/download/v1.0.2/TARS-Setup-1.0.2.exe`
+const FALLBACK_MAC = `https://github.com/${REPO}/releases/download/v1.0.2/TARS-1.0.2-mac.dmg`
 
 type GithubAsset = {
   name: string
