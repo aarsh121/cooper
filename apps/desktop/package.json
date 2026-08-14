@@ -1,6 +1,6 @@
 {
   "name": "@cooper/desktop",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "private": true,
   "description": "TARS sticky widget desktop app",
   "author": "TARS",
@@ -10,7 +10,7 @@
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "pack:win": "npm run build && electron-builder --win nsis --x64 --config.electronVersion=35.0.1",
-    "pack:mac": "npm run build && electron-builder --mac dmg zip --universal --config.electronVersion=35.0.1",
+    "pack:mac": "npm run build && electron-builder --mac dmg zip --arm64 --x64 --config.electronVersion=35.0.1",
     "pack:all": "npm run build && electron-builder --win nsis --mac dmg --config.electronVersion=35.0.1"
   },
   "dependencies": {
@@ -34,6 +34,7 @@
     "productName": "TARS",
     "electronVersion": "35.0.1",
     "npmRebuild": false,
+    "afterPack": "build/ad-hoc-sign.js",
     "compression": "maximum",
     "electronLanguages": ["en-US"],
     "directories": {
@@ -83,7 +84,7 @@
         "NSAccessibilityUsageDescription": "TARS needs Accessibility access to read your text selection and listen for its shortcuts.",
         "NSScreenCaptureUsageDescription": "TARS needs Screen Recording permission to snip your screen and mark it up."
       },
-      "artifactName": "TARS-${version}-mac.${ext}"
+      "artifactName": "TARS-${version}-mac-${arch}.${ext}"
     },
     "dmg": {
       "contents": [

@@ -3,7 +3,8 @@ import { SnipPreview } from './snip-preview'
 
 const RELEASES = 'https://github.com/aarsh121/cooper/releases'
 const WIN_INSTALLER = '/api/download?platform=win'
-const MAC_INSTALLER = '/api/download?platform=mac'
+const MAC_INSTALLER = '/api/download?platform=mac&arch=arm64'
+const MAC_INSTALLER_INTEL = '/api/download?platform=mac&arch=x64'
 
 export default function HomePage() {
   return (
@@ -102,7 +103,10 @@ export default function HomePage() {
             Download for Windows
           </a>
           <a className="btn ghost" href={MAC_INSTALLER}>
-            Download for Mac
+            Download for Mac (Apple Silicon)
+          </a>
+          <a className="btn ghost" href={MAC_INSTALLER_INTEL}>
+            Download for Mac (Intel)
           </a>
           <a className="btn ghost" href={RELEASES}>
             All releases on GitHub
@@ -112,8 +116,8 @@ export default function HomePage() {
         <div className="mac-note">
           <h3>macOS first launch</h3>
           <p>
-            TARS is not notarized yet, so macOS Gatekeeper may block it. After downloading the
-            `.dmg`, run:
+            TARS is not notarized yet, so macOS Gatekeeper may block it. Open it once with
+            right-click → Open, or clear the download flag after installing:
           </p>
           <pre>
             <code>{`xattr -cr /Applications/TARS.app`}</code>
