@@ -39,23 +39,22 @@ function pickAsset(assets: GithubAsset[], platform: 'win' | 'mac'): string | nul
   )
 }
 
+function redirect(url: string): NextResponse {
+  const response = NextResponse.redirect(url)
+  response.headers.set('Cache-Control', 'no-store')
+  return response
+}
+
 export async function GET(request: NextRequest) {
   const platform = request.nextUrl.searchParams.get('platform')
 
-  if (platform === 'win' && process.env.COOPER_WIN_URL) {
-    return NextResponse.redirect(process.env.COOPER_WIN_URL)
-  }
-  if (platform === 'mac' && process.env.COOPER_MAC_URL) {
-    return NextResponse.redirect(process.env.COOPER_MAC_URL)
-  }
-
   if (platform === 'win' || platform === 'mac') {
-    const url = pickAsset(await latestAssets(), platform)
-    if (url) {
-      return NextResponse.redirect(url)
-    }
-    return NextResponse.redirect(platform === 'win' ? FALLBACK_WIN : FALLBACK_MAC)
+    const url =
+      pickAsset(await latestAssets(), platform) ||
+      (platform === 'win' ? process.env.COOPER_WIN_URL : process.env.COOPER_MAC_URL) ||
+      (platform === 'win' ? FALLBACK_WIN : FALLBACK_MAC)
+    return redirect(url)
   }
 
-  return NextResponse.redirect(process.env.COOPER_RELEASES_URL || RELEASES)
+  return redirect(process.env.COOPER_RELEASES_URL || RELEASES)
 }
