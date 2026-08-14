@@ -45,6 +45,11 @@ const api = {
   startDrag: (payload: { files: string[] }): void => {
     ipcRenderer.send('cooper:start-drag', payload)
   },
+  onDragEnded: (callback: () => void): (() => void) => {
+    const listener = (): void => callback()
+    ipcRenderer.on('cooper:drag-ended', listener)
+    return () => ipcRenderer.removeListener('cooper:drag-ended', listener)
+  },
   saveBuffer: (payload: {
     bytes: ArrayBuffer
     fileName: string

@@ -353,19 +353,23 @@ export function registerIpc(getMainWindow: () => electron.BrowserWindow | null):
     return imported
   })
   electron.ipcMain.on('cooper:start-drag', (event, payload: { files?: string[] }) => {
-    const files = (payload?.files ?? []).filter((p) => p && existsSync(p))
-    if (!files.length) return
-    let icon = trayIcon()
-    const preview = files.find((p) => /\.(png|jpe?g|gif|webp)$/i.test(p))
-    if (preview) {
-      const image = electron.nativeImage.createFromPath(preview)
-      if (!image.isEmpty()) icon = image.resize({ width: 48, height: 48 })
+    const files = [...new Set((payload?.files ?? []).filter((p) => p && existsSync(p)))]
+    if (!files.length) {
+      event.sender.send('cooper:drag-ended')
+      return
     }
-    event.sender.startDrag({
-      file: files[0],
-      files,
-      icon
-    })
+    try {
+      // startDrag blocks until the OS drag session finishes.
+      event.sender.startDrag(
+        files.length === 1
+          ? { file: files[0], icon: dragIcon(files[0]) }
+          : { file: files[0], files, icon: dragIcon(files[0]) }
+      )
+    } catch (error) {
+      console.error('Failed to start native file drag:', error)
+    } finally {
+      event.sender.send('cooper:drag-ended')
+    }
   })
   electron.ipcMain.handle(
     'cooper:save-buffer',
@@ -448,8 +452,20 @@ export function registerIpc(getMainWindow: () => electron.BrowserWindow | null):
   })
 }
 
+function dragIcon(filePath: string): electron.NativeImage {
+  if (/\.(png|jpe?g|gif|webp|bmp)$/i.test(filePath)) {
+    const image = electron.nativeImage.createFromPath(filePath)
+    if (!image.isEmpty()) return image.resize({ width: 64, height: 64 })
+  }
+  // Windows refuses to start a drag without a non-empty icon.
+  return dotIcon(64)
+}
+
 export function trayIcon(): electron.NativeImage {
-  const size = 16
+  return dotIcon(16)
+}
+
+function dotIcon(size: number): electron.NativeImage {
   const scale = 2
   const px = size * scale
   const buf = Buffer.alloc(px * px * 4)

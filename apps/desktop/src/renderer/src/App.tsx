@@ -41,6 +41,13 @@ function renderRichText(text: string): React.ReactNode[] {
   })
 }
 
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+}
+
 function itemCopyText(item: CooperItem): string {
   const text = item.text?.trim()
   if (text && text !== 'Image') return text
@@ -104,6 +111,7 @@ function AttachmentPreview({
         type="button"
         className="image-chip"
         title={file.name}
+        draggable={false}
         onClick={(e) => {
           e.stopPropagation()
           onOpen?.()
@@ -113,6 +121,7 @@ function AttachmentPreview({
           <img
             src={src}
             alt={file.name}
+            draggable={false}
             onError={() => setFailed(true)}
           />
         ) : (
@@ -138,6 +147,7 @@ function AttachmentPreview({
       type="button"
       className="file-chip"
       title={file.path}
+      draggable={false}
       onClick={(e) => {
         e.stopPropagation()
         if (onRemove) onRemove()
@@ -162,6 +172,7 @@ export default function App() {
   const [pasteHint, setPasteHint] = useState(false)
   const dragDepth = useRef(0)
   const draggingOut = useRef(false)
+  const dragOutTimer = useRef(0)
   const resizing = useRef(false)
   const lastResize = useRef({ x: 0, y: 0 })
   const listRef = useRef<HTMLDivElement>(null)
@@ -169,6 +180,16 @@ export default function App() {
   useEffect(() => {
     void window.tars.getState().then(setState)
     return window.tars.onState(setState)
+  }, [])
+
+  useEffect(() => {
+    return window.tars.onDragEnded(() => {
+      if (dragOutTimer.current) {
+        window.clearTimeout(dragOutTimer.current)
+        dragOutTimer.current = 0
+      }
+      draggingOut.current = false
+    })
   }, [])
 
   useEffect(() => {
@@ -413,16 +434,34 @@ export default function App() {
     const files = bundle.flatMap((entry) => entry.attachments.map((file) => file.path))
 
     draggingOut.current = true
-    event.dataTransfer.effectAllowed = 'copy'
+
+    if (files.length) {
+      // Chromium must abandon its own drag before Electron can start the OS file drag.
+      event.preventDefault()
+      window.tars.startDrag({ files })
+      // A prevented dragstart never produces a dragend, so clear the flag ourselves.
+      armDragOutTimeout()
+      return
+    }
+
+    // Chat composers reject drops whose allowed effects don't include the one they ask for.
+    event.dataTransfer.effectAllowed = 'all'
     if (text) {
       event.dataTransfer.setData('text/plain', text)
       event.dataTransfer.setData('text', text)
+      event.dataTransfer.setData(
+        'text/html',
+        texts.map((line) => `<div>${escapeHtml(line)}</div>`).join('')
+      )
     }
+  }
 
-    if (files.length) {
-      event.preventDefault()
-      window.tars.startDrag({ files })
-    }
+  function armDragOutTimeout(): void {
+    if (dragOutTimer.current) window.clearTimeout(dragOutTimer.current)
+    dragOutTimer.current = window.setTimeout(() => {
+      draggingOut.current = false
+      dragOutTimer.current = 0
+    }, 15000)
   }
 
   function onCardDragEnd(): void {
