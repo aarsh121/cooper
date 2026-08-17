@@ -77,6 +77,7 @@ export default function SnipApp() {
   const colorRef = useRef(color)
   const selRef = useRef(sel)
   const phaseRef = useRef(phase)
+  const savingRef = useRef(false)
   const rafRef = useRef(0)
 
   shapesRef.current = shapes
@@ -125,6 +126,10 @@ export default function SnipApp() {
       setShapes([])
       draftRef.current = null
       dragRef.current = null
+      // The overlay window is parked and reused between snips, so clear the
+      // save latch that the previous snip left behind.
+      savingRef.current = false
+      setSaving(false)
       hideMarquee()
     }
     void window.tars.getSnipPayload().then(apply)
@@ -158,8 +163,10 @@ export default function SnipApp() {
   const save = useCallback(async () => {
     const image = imgRef.current
     const box = selRef.current
-    if (!image || !box || saving) return
+    if (!image || !box || savingRef.current) return
+    savingRef.current = true
     setSaving(true)
+    let saved = false
     try {
       const scaleX = image.naturalWidth / window.innerWidth
       const scaleY = image.naturalHeight / window.innerHeight
@@ -180,13 +187,16 @@ export default function SnipApp() {
       )
       if (!blob) return
       const bytes = await blob.arrayBuffer()
-      const item = await window.tars.completeSnip({ bytes })
-      if (!item) setSaving(false)
+      saved = Boolean(await window.tars.completeSnip({ bytes }))
     } catch (error) {
       console.error('Failed to save snip:', error)
-      setSaving(false)
+    } finally {
+      if (!saved) {
+        savingRef.current = false
+        setSaving(false)
+      }
     }
-  }, [saving])
+  }, [])
 
   const cancel = useCallback(() => {
     void window.tars.cancelSnip()
