@@ -78,6 +78,48 @@ function isImageAttachment(file: CooperAttachment): boolean {
   return file.mime.startsWith('image/') || /\.(png|jpe?g|gif|webp)$/i.test(file.name)
 }
 
+const MAX_INLINE_DRAG_BYTES = 24 * 1024 * 1024
+
+// dragstart is synchronous, so attachment bytes have to already be in memory by the
+// time a drag begins. Previews populate this for images; cards prefetch on pointerdown.
+const attachmentData = new Map<string, string>()
+const attachmentReads = new Map<string, Promise<string | null>>()
+
+function readAttachment(filePath: string): Promise<string | null> {
+  const cached = attachmentData.get(filePath)
+  if (cached) return Promise.resolve(cached)
+  const inFlight = attachmentReads.get(filePath)
+  if (inFlight) return inFlight
+  const read = window.tars.readAttachmentDataUrl(filePath).then((url) => {
+    if (url) attachmentData.set(filePath, url)
+    attachmentReads.delete(filePath)
+    return url
+  })
+  attachmentReads.set(filePath, read)
+  return read
+}
+
+function attachmentBuffer(filePath: string): ArrayBuffer | null {
+  const dataUrl = attachmentData.get(filePath)
+  if (!dataUrl) return null
+  const comma = dataUrl.indexOf(',')
+  if (comma < 0) return null
+  try {
+    const binary = atob(dataUrl.slice(comma + 1))
+    const buffer = new ArrayBuffer(binary.length)
+    const bytes = new Uint8Array(buffer)
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+    return buffer
+  } catch {
+    return null
+  }
+}
+
+function pathToFileUrl(filePath: string): string {
+  const normalized = filePath.replace(/\\/g, '/').replace(/^\/+/, '')
+  return `file:///${encodeURI(normalized).replace(/#/g, '%23').replace(/\?/g, '%3F')}`
+}
+
 function AttachmentPreview({
   file,
   onRemove,
@@ -94,8 +136,8 @@ function AttachmentPreview({
     if (!isImageAttachment(file)) return
     let alive = true
     setFailed(false)
-    setSrc(null)
-    void window.tars.readAttachmentDataUrl(file.path).then((url) => {
+    setSrc(attachmentData.get(file.path) ?? null)
+    void readAttachment(file.path).then((url) => {
       if (!alive) return
       if (url) setSrc(url)
       else setFailed(true)
@@ -430,29 +472,75 @@ export default function App() {
       ? state.items.filter((entry) => selected.has(entry.id))
       : [item]
     const texts = bundle.map(itemCopyText).filter(Boolean)
-    const text = texts.map((line) => `- ${line}`).join('\n')
-    const files = bundle.flatMap((entry) => entry.attachments.map((file) => file.path))
+    const attachments = bundle.flatMap((entry) => entry.attachments)
+    const dt = event.dataTransfer
 
     draggingOut.current = true
 
-    if (files.length) {
-      // Chromium must abandon its own drag before Electron can start the OS file drag.
+    const loaded = attachments.filter((file) => attachmentData.has(file.path))
+    if (attachments.length && loaded.length < attachments.length) {
+      // Nothing to hand Chromium yet, so fall back to the OS drag. Chromium must abandon
+      // its own drag first, and a prevented dragstart never produces a dragend.
       event.preventDefault()
-      window.tars.startDrag({ files })
-      // A prevented dragstart never produces a dragend, so clear the flag ourselves.
+      window.tars.startDrag({ files: attachments.map((file) => file.path) })
       armDragOutTimeout()
+      void Promise.all(attachments.map((file) => readAttachment(file.path)))
       return
     }
 
     // Chat composers reject drops whose allowed effects don't include the one they ask for.
-    event.dataTransfer.effectAllowed = 'all'
+    dt.effectAllowed = 'all'
+
+    for (const file of loaded) {
+      const buffer = attachmentBuffer(file.path)
+      if (!buffer) continue
+      try {
+        dt.items.add(new File([buffer], file.name, { type: file.mime }))
+      } catch {
+        // Some targets still get the file through the uri-list/DownloadURL entries below.
+      }
+    }
+
+    if (loaded.length) {
+      dt.setData('text/uri-list', loaded.map((file) => pathToFileUrl(file.path)).join('\r\n'))
+      // DownloadURL carries a single file, but it is what lets Chromium targets
+      // materialise it under its real name instead of the on-disk uuid.
+      if (loaded.length === 1) {
+        const file = loaded[0]
+        dt.setData('DownloadURL', `${file.mime}:${file.name}:${pathToFileUrl(file.path)}`)
+      }
+    }
+
+    // A drag carrying no data at all is refused by every target, so always send something.
+    const text =
+      (texts.length
+        ? texts.map((line) => `- ${line}`).join('\n')
+        : attachments.map((file) => file.path).join('\n')) || item.text.trim()
     if (text) {
-      event.dataTransfer.setData('text/plain', text)
-      event.dataTransfer.setData('text', text)
-      event.dataTransfer.setData(
-        'text/html',
-        texts.map((line) => `<div>${escapeHtml(line)}</div>`).join('')
-      )
+      dt.setData('text/plain', text)
+      dt.setData('text', text)
+    }
+
+    const html = [
+      ...texts.map((line) => `<div>${escapeHtml(line)}</div>`),
+      ...loaded
+        .filter(isImageAttachment)
+        .map(
+          (file) =>
+            `<img src="${attachmentData.get(file.path)}" alt="${escapeHtml(file.name)}" />`
+        )
+    ].join('')
+    if (html) dt.setData('text/html', html)
+  }
+
+  function prefetchAttachments(item: CooperItem): void {
+    const bundle = selected.has(item.id)
+      ? state.items.filter((entry) => selected.has(entry.id))
+      : [item]
+    for (const file of bundle.flatMap((entry) => entry.attachments)) {
+      // Big files stay on the OS drag path rather than being base64'd into memory.
+      if (file.size > MAX_INLINE_DRAG_BYTES) continue
+      if (!attachmentData.has(file.path)) void readAttachment(file.path)
     }
   }
 
@@ -675,6 +763,7 @@ export default function App() {
                       className={`card${selected.has(item.id) ? ' selected' : ''}${item.done ? ' done' : ''}`}
                       draggable
                       onClick={() => toggleSelected(item.id)}
+                      onPointerDown={() => prefetchAttachments(item)}
                       onDragStart={(e) => onCardDragStart(e, item)}
                       onDragEnd={onCardDragEnd}
                     >
